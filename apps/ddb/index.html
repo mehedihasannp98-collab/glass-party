@@ -1,0 +1,2441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1E33">
+<title>Party — Glass</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Party">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Tiro+Bangla&family=Tinos:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --navy-950:#0B1E33;
+    --navy-900:#0F2A47;
+    --navy-800:#15385C;
+    --steel-600:#3E6E97;
+    --steel-100:#DCE7EF;
+    --cyan:#2FB8C6;
+    --cyan-dark:#1E92A0;
+    --amber:#E0A339;
+    --amber-dark:#B97F1F;
+    --paper:#FBF8F1;
+    --paper-line:#E6E0CF;
+    --ink:#1B2430;
+    --ink-soft:#5A6472;
+    --bg:#F2F4F7;
+    --card:#FFFFFF;
+    --line:#E3E7ED;
+    --good:#2E8B57;
+    --bad:#C0392B;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow:0 1px 2px rgba(15,42,71,.06), 0 8px 24px -12px rgba(15,42,71,.18);
+    font-variant-numeric: tabular-nums;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Hind Siliguri', system-ui, -apple-system, sans-serif;
+    background:radial-gradient(1100px 500px at 50% -80px, #E7F0F8 0%, var(--bg) 55%);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:74px;
+    min-height:100vh;
+  }
+  h1,h2,h3{margin:0}
+  button{font-family:inherit}
+  input,select,textarea{font-family:inherit}
+  ::selection{background:var(--cyan);color:#fff}
+
+  /* Topbar */
+  .topbar{
+    background:
+      radial-gradient(420px 140px at 15% -30%, rgba(224,163,57,.28), transparent 60%),
+      linear-gradient(135deg,var(--navy-950),var(--navy-800) 75%, var(--steel-600) 160%);
+    color:#fff;
+    padding:18px 16px 16px;
+    position:sticky; top:0; z-index:40;
+    box-shadow:0 1px 0 rgba(255,255,255,.08) inset, 0 6px 20px -8px rgba(11,30,51,.55);
+  }
+  .topbar .brand{display:flex; align-items:center; gap:10px; flex:1; min-width:0}
+  .brand .mark{
+    width:38px;height:38px;flex:none;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid var(--amber);
+    box-shadow:0 0 0 2px rgba(11,30,51,.6), 0 0 0 4px rgba(224,163,57,.18), 0 3px 10px -2px rgba(0,0,0,.5);
+    display:block;
+  }
+  .brand h1{font-size:17px; font-weight:700; letter-spacing:.2px; background:linear-gradient(180deg,#fff,#DCEAFB); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .brand .sub{font-size:11.5px; color:#AFC3D6; margin-top:1px}
+  .topbar .tabs{display:none}
+  .topbar-row{display:flex; align-items:center; gap:10px}
+  .install-btn{
+    flex:none; border:1.5px solid rgba(255,255,255,.35);
+    background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.05)); color:#fff;
+    border-radius:10px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;
+    white-space:nowrap; box-shadow:0 1px 0 rgba(255,255,255,.25) inset;
+  }
+  .install-btn:active{transform:scale(.96)}
+
+  /* Lock screen */
+  #lockScreen{
+    position:fixed; inset:0; z-index:9999; background:linear-gradient(160deg,var(--navy-950),var(--navy-800) 130%);
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; padding:24px; text-align:center;
+  }
+  #lockScreen.hidden{display:none}
+  #lockScreen .lock-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid var(--amber); box-shadow:0 8px 30px -6px rgba(0,0,0,.5)}
+  #lockScreen h2{color:#fff; font-size:18px; font-weight:700}
+  #lockScreen p{color:#AFC3D6; font-size:13px; max-width:280px; line-height:1.6}
+  .fp-btn{
+    width:76px; height:76px; border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(135deg,var(--cyan),var(--cyan-dark)); color:#04333a; font-size:34px;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px -8px rgba(47,184,198,.6);
+  }
+  .fp-btn:active{transform:scale(.95)}
+  .lock-alt{background:none; border:none; color:#AFC3D6; text-decoration:underline; font-size:12.5px; cursor:pointer; margin-top:4px}
+  .pin-wrap{display:flex; gap:8px; margin-top:6px}
+  .pin-wrap input{
+    width:44px; height:52px; text-align:center; font-size:22px; border-radius:10px; border:1.5px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.08); color:#fff; outline:none;
+  }
+  .pin-wrap input:focus{border-color:var(--cyan)}
+  #lockError{color:#FF8A80; font-size:12.5px; min-height:16px}
+
+  /* Views */
+  .view{display:none; padding:14px; max-width:820px; margin:0 auto}
+  .view.active{display:block}
+
+  /* Card */
+  .card{
+    background:linear-gradient(180deg, #FFFFFF, #FBFCFE);
+    border-radius:var(--radius);
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset, var(--shadow);
+    padding:16px;
+    margin-bottom:14px;
+    border:1px solid var(--line);
+  }
+  .card h2{font-size:14.5px; font-weight:700; color:var(--navy-900); margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .card h2 .dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--cyan-dark)); box-shadow:0 0 8px 0 rgba(47,184,198,.6)}
+
+  /* Party picker (combobox) */
+  .picker{position:relative}
+  .picker input{
+    width:100%; padding:13px 40px 13px 14px; border-radius:12px; border:1.5px solid var(--line);
+    font-size:15px; background:#fff; color:var(--ink); outline:none;
+  }
+  .picker input:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(47,184,198,.15)}
+  .picker .clear{position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:none; color:var(--ink-soft); font-size:18px; cursor:pointer; padding:6px 8px; display:none}
+  .picker .clear.show{display:block}
+  .picker-list{
+    position:absolute; left:0; right:0; top:calc(100% + 6px); background:#fff; border-radius:12px;
+    box-shadow:0 12px 32px -10px rgba(15,42,71,.35); border:1px solid var(--line); max-height:260px; overflow:auto; z-index:50; display:none;
+  }
+  .picker-list.show{display:block}
+  .picker-item{padding:11px 14px; cursor:pointer; display:flex; justify-content:space-between; gap:10px; font-size:14px; border-bottom:1px solid #F0F1F3}
+  .picker-item:last-child{border-bottom:none}
+  .picker-item:hover, .picker-item.active{background:var(--steel-100)}
+  .picker-item .code{color:var(--ink-soft); font-size:12.5px; background:#F2F4F7; padding:2px 7px; border-radius:20px}
+  .picker-empty{padding:16px; text-align:center; color:var(--ink-soft); font-size:13px}
+
+  /* KPI grid */
+  .kpi-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px}
+  .kpi{
+    background:linear-gradient(160deg, #FFFFFF 0%, #F6FAFD 100%);
+    border-radius:14px; padding:13px 14px 13px 16px;
+    box-shadow:0 1px 0 rgba(255,255,255,.8) inset, var(--shadow);
+    border:1px solid var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .kpi::before{content:''; position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:14px 0 0 14px; background:linear-gradient(180deg, var(--cyan), var(--cyan-dark))}
+  .kpi.amber::before{background:linear-gradient(180deg, var(--amber), var(--amber-dark))}
+  .kpi.navy::before{background:linear-gradient(180deg, var(--steel-600), var(--navy-800))}
+  .kpi.good::before{background:linear-gradient(180deg, #3FA873, var(--good))}
+  .kpi .label{font-size:11.5px; color:var(--ink-soft); font-weight:600}
+  .kpi .value{font-size:19px; font-weight:700; color:var(--navy-950); margin-top:3px; letter-spacing:-.2px}
+  .kpi .value small{font-size:12px; font-weight:600; color:var(--ink-soft)}
+
+  /* chart */
+  .chart-wrap{display:flex; align-items:flex-end; gap:8px; height:150px; padding:6px 2px 0}
+  .chart-bar-col{flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; gap:6px; min-width:0}
+  .chart-bar{
+    width:100%; max-width:26px; border-radius:6px 6px 3px 3px; background:linear-gradient(180deg,var(--cyan),var(--cyan-dark));
+    transition:height .4s ease;
+  }
+  .chart-bar-col .amt{font-size:9.5px; color:var(--ink-soft); font-weight:600; white-space:nowrap}
+  .chart-bar-col .m{font-size:11px; color:var(--ink-soft); font-weight:600}
+  .chart-empty{color:var(--ink-soft); font-size:13px; text-align:center; padding:20px}
+
+  /* statement */
+  .statement{
+    background:linear-gradient(180deg,var(--paper),#F7F3E8);
+    border-radius:14px;
+    border:1px solid var(--paper-line);
+    padding:0;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 1px 0 rgba(255,255,255,.6) inset, var(--shadow);
+  }
+  .statement::before{
+    content:''; position:absolute; left:14px; top:0; bottom:0; width:1px; background:repeating-linear-gradient(180deg, #D8503A55 0 6px, transparent 6px 12px);
+  }
+  .statement-head{padding:18px 16px 14px 26px}
+  .statement-head h3{font-size:16.5px; font-weight:700; color:var(--navy-950)}
+  .statement-head .meta{font-size:12px; color:var(--ink-soft); margin-top:5px; display:flex; flex-wrap:wrap; gap:4px 14px}
+  .statement-head .meta b{color:var(--ink)}
+  .month-filter{display:flex; align-items:center; gap:8px; margin-top:12px}
+  .month-filter label{font-size:11.5px; font-weight:600; color:var(--ink-soft); white-space:nowrap}
+  .month-filter select{
+    flex:1; max-width:200px; padding:9px 10px; border-radius:10px; border:1.5px solid var(--line);
+    font-size:13.5px; font-family:inherit; background:#fff; color:var(--ink); outline:none;
+  }
+  .month-filter select:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(47,184,198,.15)}
+  .range-filter{display:flex; flex-wrap:wrap; align-items:end; gap:10px; margin-bottom:14px}
+  .range-filter .rf-field{display:flex; flex-direction:column; gap:5px}
+  .range-filter .rf-field label{font-size:11.5px; font-weight:600; color:var(--ink-soft)}
+  .range-filter select{
+    padding:9px 10px; border-radius:10px; border:1.5px solid var(--line);
+    font-size:13.5px; font-family:inherit; background:#fff; color:var(--ink); outline:none; min-width:130px;
+  }
+  .range-filter select:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(47,184,198,.15)}
+  .rank-badge{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:var(--steel-100); color:var(--navy-900); font-size:11.5px; font-weight:700; margin-right:6px}
+  .rank-badge.top1{background:linear-gradient(160deg,#FFE49A,#F4B93E); color:#5A3D00}
+  .rank-badge.top2{background:linear-gradient(160deg,#E7ECF1,#C7D2DC); color:#333}
+  .rank-badge.top3{background:linear-gradient(160deg,#F3D2B5,#D79A65); color:#4A2C0E}
+  .stmt-table-wrap{overflow-x:auto; padding:0 4px 4px 24px}
+  table.stmt{border-collapse:collapse; width:100%; min-width:720px; font-size:12.5px}
+  table.stmt thead th{
+    background:linear-gradient(180deg,var(--navy-800),var(--navy-900)); color:#fff; font-weight:600; text-align:right; padding:9px 8px; white-space:nowrap; position:sticky; top:0;
+  }
+  table.stmt thead th:first-child, table.stmt thead th:nth-child(2){text-align:left}
+  table.stmt tbody td{padding:8px 8px; text-align:right; border-bottom:1px solid var(--paper-line); white-space:nowrap; color:var(--ink)}
+  table.stmt tbody td:first-child, table.stmt tbody td:nth-child(2){text-align:left}
+  table.stmt tbody tr:nth-child(even){background:#F5F1E5}
+  table.stmt tbody tr:hover{background:#EFE8D2}
+  table.stmt td.cr{color:var(--amber-dark); font-weight:600}
+  table.stmt tfoot td{padding:11px 8px; font-weight:700; background:linear-gradient(180deg,var(--navy-900),var(--navy-950)); color:#fff; text-align:right; border:none}
+  table.stmt tfoot td:first-child{text-align:left}
+  .empty-state{padding:34px 16px; text-align:center; color:var(--ink-soft)}
+  .empty-state .big{font-size:34px; margin-bottom:8px}
+  .empty-state p{font-size:13.5px; margin:4px 0 0}
+
+  /* 12-month all-parties summary table (always visible on dashboard home) */
+  table.year{width:100%; border-collapse:collapse; font-size:12.5px}
+  table.year thead th{background:linear-gradient(180deg,var(--navy-800),var(--navy-900)); color:#fff; font-weight:600; text-align:right; padding:9px 8px; white-space:nowrap; position:sticky; top:0}
+  table.year thead th:first-child{text-align:left}
+  table.year tbody td{padding:8px 8px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; color:var(--ink)}
+  table.year tbody td:first-child{text-align:left; font-weight:600; color:var(--navy-900)}
+  table.year tbody tr:nth-child(even){background:#F7F9FB}
+  table.year tbody tr.cur-month{background:rgba(47,184,198,.12)}
+  table.year tbody tr.cur-month td:first-child{color:var(--cyan-dark)}
+  table.year tbody tr{cursor:pointer}
+  table.year tbody tr.sel-month{background:var(--steel-100)}
+  table.year tbody tr.sel-month td:first-child{color:var(--navy-950)}
+  table.year tfoot td{padding:11px 8px; font-weight:700; background:linear-gradient(180deg,var(--navy-900),var(--navy-950)); color:#fff; text-align:right; border:none}
+  table.year tfoot td:first-child{text-align:left}
+
+  /* Share-as-image card (offscreen render target for WhatsApp image share) */
+  .share-card{
+    width:900px; background:#FFFFFF; padding:26px 28px; font-family:'Hind Siliguri', system-ui, sans-serif;
+  }
+  .share-card .sc-head{margin-bottom:16px}
+  .share-card .sc-head h3{font-size:22px; font-weight:700; color:var(--navy-950)}
+  .share-card .sc-head .meta{font-size:13px; color:var(--ink-soft); margin-top:6px; display:flex; flex-wrap:wrap; gap:4px 16px}
+  .share-card .sc-head .meta b{color:var(--ink)}
+  .share-card .kpi-grid{margin-bottom:16px}
+  .share-card .card{margin-bottom:16px}
+  .share-card .chart-wrap{height:170px}
+  .share-card .statement{border-radius:14px}
+  .share-card .sc-foot{margin-top:16px; text-align:center; font-size:12.5px; color:var(--ink-soft); font-style:normal; font-weight:600}
+  /* Compact summary strip for month-only share (shows this month's totals at a glance) */
+  .sc-summary{display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 18px}
+  .sc-summary .item{
+    flex:1; min-width:140px; background:linear-gradient(160deg,#FFFFFF,#F6FAFD); border:1px solid var(--line);
+    border-radius:12px; padding:10px 14px; box-shadow:0 1px 0 rgba(255,255,255,.8) inset;
+  }
+  .sc-summary .item .lbl{font-size:11.5px; color:var(--ink-soft); font-weight:600}
+  .sc-summary .item .val{font-size:18px; font-weight:700; color:var(--navy-950); margin-top:2px}
+  .sc-summary .item.good .val{color:var(--good)}
+  .sc-summary .item.amber .val{color:var(--amber-dark)}
+  /* Plain month-statement share (no paper texture, no dashed rule — matches print look).
+     Sized to A4 landscape (297mm × 210mm @96dpi ≈ 1123×794px) so the shared image
+     looks and prints exactly like a proper A4 page. */
+  .share-card.plain{width:1123px; min-height:794px; padding:40px 46px; display:flex; flex-direction:column}
+  .share-card.plain .statement{background:#FFFFFF; border:none; border-radius:0; flex:1}
+  .share-card.plain .statement::before{display:none}
+  .share-card.plain .stmt-table-wrap{padding:0}
+
+  .stmt-actions{display:flex; gap:8px; padding:12px 16px 16px 26px; flex-wrap:wrap}
+  .btn{
+    border:none; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease;
+    box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 3px 10px -4px rgba(15,42,71,.35);
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:linear-gradient(155deg,var(--navy-900),var(--navy-950) 70%); color:#fff}
+  .btn-cyan{background:linear-gradient(155deg,var(--cyan),var(--cyan-dark) 85%); color:#04333a}
+  .btn-amber{background:linear-gradient(155deg,var(--amber),var(--amber-dark) 85%); color:#3a2600}
+  .btn-ghost{background:#fff; color:var(--navy-900); border:1.5px solid var(--line); box-shadow:none}
+  .btn-danger{background:linear-gradient(155deg,#FCEBEA,#F8D9D6); color:var(--bad); box-shadow:none}
+  .btn-sm{padding:7px 11px; font-size:12.5px; border-radius:8px}
+  .btn-block{width:100%; justify-content:center}
+
+  /* All-parties table (dashboard default) */
+  table.plist{width:100%; border-collapse:collapse; font-size:13px}
+  table.plist th{text-align:right; font-size:11.5px; color:var(--ink-soft); font-weight:600; padding:8px 6px; border-bottom:2px solid var(--line)}
+  table.plist th:first-child{text-align:left}
+  table.plist td{padding:11px 6px; text-align:right; border-bottom:1px solid var(--line); cursor:pointer}
+  table.plist td:first-child{text-align:left; font-weight:600; color:var(--navy-900)}
+  table.plist tr:hover td{background:var(--steel-100)}
+  table.plist .code-badge{font-size:11px; color:var(--ink-soft); font-weight:400}
+
+  /* Form */
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .field{display:flex; flex-direction:column; gap:5px; margin-bottom:10px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:12px; font-weight:600; color:var(--ink-soft)}
+  .field input, .field select{
+    padding:11px 12px; border-radius:10px; border:1.5px solid var(--line); font-size:14.5px; background:#fff; color:var(--ink); outline:none; width:100%;
+  }
+  .field input:focus, .field select:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(47,184,198,.15)}
+  .field .hint{font-size:11px; color:var(--ink-soft)}
+  .field-row{display:flex; gap:8px}
+  .field-row .field{flex:1}
+  .inline-add{display:flex; gap:6px; margin-top:4px}
+  .inline-add input{flex:1; padding:9px 10px; border-radius:8px; border:1.5px dashed var(--line); font-size:13px}
+  .form-actions{display:flex; gap:8px; margin-top:6px}
+
+  /* entries table */
+  .search-row{display:flex; gap:8px; margin-bottom:12px}
+  .search-row input{flex:1; padding:11px 12px; border-radius:10px; border:1.5px solid var(--line); font-size:14px}
+  table.entries{width:100%; border-collapse:collapse; font-size:12.5px}
+  table.entries th{text-align:right; font-size:11px; color:var(--ink-soft); font-weight:600; padding:7px 5px; border-bottom:2px solid var(--line); white-space:nowrap}
+  table.entries th:nth-child(1), table.entries th:nth-child(2){text-align:left}
+  table.entries td{padding:9px 5px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+  table.entries td:nth-child(1), table.entries td:nth-child(2){text-align:left}
+  table.entries tr:hover td{background:#FAFBFC}
+  .row-actions{display:flex; gap:4px; justify-content:flex-end}
+  .icon-btn{border:none; background:var(--steel-100); color:var(--navy-900); width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center}
+  .icon-btn.danger{background:#FCEBEA; color:var(--bad)}
+  .table-scroll{overflow-x:auto}
+  .entries-note{font-size:12px; color:var(--ink-soft); margin-top:8px; text-align:center}
+
+  /* settings lists */
+  .list-row{display:flex; align-items:center; justify-content:space-between; padding:11px 4px; border-bottom:1px solid var(--line); gap:10px}
+  .list-row:last-child{border-bottom:none}
+  .list-row .name{font-weight:600; font-size:14px; color:var(--ink)}
+  .list-row .meta2{font-size:11.5px; color:var(--ink-soft)}
+  .list-row .actions{display:flex; gap:6px}
+
+  .badge{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--steel-100); color:var(--navy-900)}
+
+  /* toast */
+  #toast{
+    position:fixed; left:50%; bottom:86px; transform:translate(-50%,20px); background:var(--navy-950); color:#fff;
+    padding:11px 18px; border-radius:12px; font-size:13.5px; font-weight:600; box-shadow:0 10px 30px -8px rgba(0,0,0,.4);
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; z-index:200; max-width:88%; text-align:center;
+  }
+  #toast.show{opacity:1; transform:translate(-50%,0)}
+
+  /* bottom nav */
+  .bottomnav{
+    position:fixed; left:0; right:0; bottom:0; z-index:60;
+    background:linear-gradient(180deg,#FFFFFF,#FAFBFD); border-top:1px solid var(--line);
+    display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -6px 20px -12px rgba(15,42,71,.25);
+  }
+  .navbtn{
+    flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 4px 6px; border-radius:12px; color:var(--ink-soft); cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .navbtn .ic{font-size:19px; line-height:1}
+  .navbtn .tx{font-size:11px; font-weight:600}
+  .navbtn.active{color:var(--navy-950); background:linear-gradient(160deg,var(--steel-100),#CDE0EE); box-shadow:0 1px 0 rgba(255,255,255,.6) inset}
+
+  .section-gap{margin-top:18px}
+  .muted{color:var(--ink-soft)}
+  .flex-between{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .small-title{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--ink-soft); margin:4px 0 10px}
+
+  @media (min-width:640px){
+    .form-grid{grid-template-columns:1fr 1fr 1fr}
+  }
+
+
+  /* ===== Document look: Times New Roman, 24px, pure black & white =====
+     Used by the printed statement (below, inside @media print) and by the share-as-image cards. */
+  :root{ --doc-font:'Times New Roman','Tinos','Liberation Serif','Tiro Bangla','Hind Siliguri',serif; }
+
+    .share-card, .share-card *{ font-family:var(--doc-font) !important; color:#000 !important; }
+    .share-card .statement{ background:#fff !important; border:none !important; border-radius:0 !important; box-shadow:none !important; overflow:visible !important; }
+    .share-card .statement::before{ display:none !important; }
+    .share-card .statement-head, .share-card .sc-head{ padding:0 0 14px 0; margin-bottom:18px; border-bottom:3px double #000; }
+    .share-card .statement-head h3, .share-card .sc-head h3{ font-size:32px; font-weight:700; line-height:1.15; }
+    .share-card .meta{ font-size:24px; margin-top:8px; gap:4px 28px; }
+    .share-card .meta b{ font-size:24px; font-weight:700; }
+    .share-card .stmt-table-wrap{ overflow:visible; padding:0; }
+    .share-card table.stmt{ width:100%; min-width:0; border-collapse:collapse; font-size:24px; border:1.5px solid #000; }
+    .share-card table.stmt thead th{ position:static; background:#E6E6E6 !important; font-size:24px; font-weight:700; padding:9px 10px; border:1.5px solid #000; white-space:normal; line-height:1.15; }
+    .share-card table.stmt.stmt-allparties thead th:nth-child(4), .share-card table.stmt.stmt-allparties tbody td:nth-child(4){ width:60px; max-width:60px; }
+    .share-card table.stmt.stmt-party thead th:nth-child(3), .share-card table.stmt.stmt-party tbody td:nth-child(3){ width:60px; max-width:60px; }
+    .share-card table.stmt tbody td{ font-size:24px; font-weight:600; padding:7px 10px; border:1px solid #000; line-height:1.2; white-space:normal; }
+    .share-card table.stmt tbody td.dt{ white-space:nowrap; }
+    .share-card table.stmt tbody tr:nth-child(even){ background:#F2F2F2 !important; }
+    .share-card table.stmt tbody tr:nth-child(odd){ background:#fff !important; }
+    .share-card table.stmt td.cr{ font-weight:700; }
+    .share-card table.stmt tfoot{ display:table-row-group; }
+    .share-card table.stmt tfoot td{ background:#E6E6E6 !important; font-size:24px; font-weight:800; padding:10px; border:1.5px solid #000; border-top:3px double #000; white-space:normal; }
+    .share-card table.stmt tr{ break-inside:avoid; page-break-inside:avoid; }
+    .share-card .code-badge{ font-size:24px; font-weight:400; }
+    .share-card .rank-badge{ width:40px; height:40px; font-size:24px; background:transparent !important; border:1.5px solid #000; margin-right:8px; }
+    .share-card .empty-state{ font-size:24px; }
+
+    .share-card, .share-card.plain{ width:1300px; padding:40px 46px; background:#fff; font-size:24px; line-height:1.3; }
+    .share-card.plain{ min-height:919px; }
+    .share-card .sc-summary{ gap:12px; margin:16px 0 20px; }
+    .share-card .sc-summary .item{ background:#fff !important; border:2px solid #000; border-radius:0; box-shadow:none; padding:10px 16px; min-width:200px; }
+    .share-card .sc-summary .item .lbl{ font-size:24px; font-weight:400; }
+    .share-card .sc-summary .item .val{ font-size:24px; font-weight:700; margin-top:2px; }
+    .share-card .kpi-grid{ grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+    .share-card .kpi{ background:#fff !important; border:2px solid #000; border-radius:0; box-shadow:none; padding:10px 16px; }
+    .share-card .kpi::before{ display:none; }
+    .share-card .kpi .label{ font-size:24px; font-weight:400; }
+    .share-card .kpi .value{ font-size:24px; font-weight:700; margin-top:2px; letter-spacing:0; }
+    .share-card .kpi .value small{ font-size:24px; }
+    .share-card .card{ background:#fff !important; border:1.5px solid #000; border-radius:0; box-shadow:none; padding:14px 16px; margin-bottom:20px; }
+    .share-card .card h2{ font-size:24px; margin-bottom:12px; }
+    .share-card .card h2 .dot{ display:none; }
+    .share-card .chart-wrap{ height:210px; }
+    .share-card .chart-bar{ background:#000 !important; max-width:44px; border-radius:0; box-shadow:none; }
+    .share-card .chart-bar-col .amt{ font-size:24px; font-weight:600; }
+    .share-card .chart-bar-col .m{ font-size:24px; font-weight:600; }
+    .share-card .chart-empty{ font-size:24px; }
+    .share-card .sc-foot{ margin-top:22px; padding-top:12px; border-top:1.5px dashed #000; font-size:24px; font-weight:700; }
+
+
+  /* On screen too: statement/invoice text is Times New Roman 24px (buttons and filters keep the app font) */
+  #printArea .statement-head h3, #printArea .statement-head .meta, #printArea .statement-head .meta b,
+  #printArea table.stmt, #printArea table.stmt th, #printArea table.stmt td,
+  #printArea .code-badge, #printArea .empty-state, #printArea .empty-state p{ font-family:var(--doc-font) !important; font-size:24px !important; }
+  #printArea .statement-head h3{ font-size:32px !important; }
+  #printArea .rank-badge{ width:40px; height:40px; font-size:24px !important; font-family:var(--doc-font) !important; }
+  #printArea table.stmt{ min-width:0; }
+
+  /* ===== Dashboard / party-wise page: Times New Roman + pure black & white (for a B&W printer) =====
+     Covers the party search, the KPI boxes, the monthly chart, the statement and the all-parties tables.
+     (The top bar and bottom menu of the app keep their normal look.) */
+  #view-dashboard, #view-dashboard *{ font-family:var(--doc-font) !important; color:#000 !important; text-shadow:none !important; box-shadow:none !important; }
+  #view-dashboard .card, #view-dashboard .kpi, #view-dashboard .statement{ background:#fff !important; border:1.5px solid #000 !important; border-radius:0 !important; }
+  #view-dashboard .kpi::before, #view-dashboard .statement::before{ display:none !important; }
+  #view-dashboard .card h2 .dot{ display:none !important; }
+  #view-dashboard .chart-bar{ background:#000 !important; border-radius:0 !important; }
+  #view-dashboard input, #view-dashboard select{ background:#fff !important; border:1.5px solid #000 !important; border-radius:0 !important; }
+  #view-dashboard .picker .clear{ background:none !important; border:none !important; }
+  #view-dashboard .picker-list{ background:#fff !important; border:1.5px solid #000 !important; border-radius:0 !important; }
+  #view-dashboard .picker-item{ border-bottom:1px solid #000 !important; }
+  #view-dashboard .picker-item:hover, #view-dashboard .picker-item.active{ background:#E6E6E6 !important; }
+  #view-dashboard .picker-item .code{ background:transparent !important; border:1px solid #000; border-radius:0 !important; }
+  #view-dashboard .btn, #view-dashboard .icon-btn{ background:#fff !important; border:1.5px solid #000 !important; border-radius:0 !important; filter:grayscale(1); }
+  #view-dashboard .empty-state .big{ filter:grayscale(1); }
+  #view-dashboard table thead th{ background:#E6E6E6 !important; border-bottom:1.5px solid #000 !important; }
+  #view-dashboard table tfoot td{ background:#E6E6E6 !important; border-top:2px solid #000 !important; }
+  #view-dashboard table tbody tr:nth-child(even){ background:#F2F2F2 !important; }
+  #view-dashboard table tbody tr:nth-child(odd){ background:#fff !important; }
+  #view-dashboard table tbody tr.cur-month td, #view-dashboard table tbody tr.sel-month td{ background:#D9D9D9 !important; font-weight:700; }
+  #view-dashboard table tbody tr:hover td{ background:#EFEFEF !important; }
+  #view-dashboard table td, #view-dashboard table th{ border-color:#000 !important; }
+  #view-dashboard .rank-badge, #view-dashboard .rank-badge.top1, #view-dashboard .rank-badge.top2, #view-dashboard .rank-badge.top3{ background:#fff !important; border:1.5px solid #000 !important; }
+
+  @media print{
+    @page{ size: A4 landscape; margin: 10mm; }
+    html, body{ background:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body *{visibility:hidden}
+    .bottomnav, .topbar{display:none !important}
+    #printArea, #printArea *{visibility:visible}
+    /* laid out on a 1300px-wide page, then shrunk (zoom .8) to A4 landscape's printable width,
+       so the 24px text comes out at about 14pt on paper */
+    #printArea{position:absolute; left:0; top:0; width:1300px; zoom:.8; padding:0; margin:0}
+    .no-print{display:none !important}
+    .stmt-actions{display:none !important}
+    body{padding-bottom:0}
+
+    #printArea, #printArea *{ font-family:var(--doc-font) !important; color:#000 !important; }
+    #printArea{ background:#fff !important; border:none !important; border-radius:0 !important; box-shadow:none !important; overflow:visible !important; }
+    #printArea::before{ display:none !important; }
+    #printArea .statement-head, #printArea .sc-head{ padding:0 0 14px 0; margin-bottom:18px; border-bottom:3px double #000; }
+    #printArea .statement-head h3, #printArea .sc-head h3{ font-size:32px; font-weight:700; line-height:1.15; }
+    #printArea .meta{ font-size:24px; margin-top:8px; gap:4px 28px; }
+    #printArea .meta b{ font-size:24px; font-weight:700; }
+    #printArea .stmt-table-wrap{ overflow:visible; padding:0; }
+    #printArea table.stmt{ width:100%; min-width:0; border-collapse:collapse; font-size:24px; border:1.5px solid #000; }
+    #printArea table.stmt thead th{ position:static; background:#E6E6E6 !important; font-size:24px; font-weight:700; padding:9px 10px; border:1.5px solid #000; white-space:normal; line-height:1.15; }
+    #printArea table.stmt.stmt-allparties thead th:nth-child(4), #printArea table.stmt.stmt-allparties tbody td:nth-child(4){ width:60px; max-width:60px; }
+    #printArea table.stmt.stmt-party thead th:nth-child(3), #printArea table.stmt.stmt-party tbody td:nth-child(3){ width:60px; max-width:60px; }
+    #printArea table.stmt tbody td{ font-size:24px; font-weight:600; padding:7px 10px; border:1px solid #000; line-height:1.2; white-space:normal; }
+    #printArea table.stmt tbody td.dt{ white-space:nowrap; }
+    #printArea table.stmt tbody tr:nth-child(even){ background:#F2F2F2 !important; }
+    #printArea table.stmt tbody tr:nth-child(odd){ background:#fff !important; }
+    #printArea table.stmt td.cr{ font-weight:700; }
+    #printArea table.stmt tfoot{ display:table-row-group; }
+    #printArea table.stmt tfoot td{ background:#E6E6E6 !important; font-size:24px; font-weight:800; padding:10px; border:1.5px solid #000; border-top:3px double #000; white-space:normal; }
+    #printArea table.stmt tr{ break-inside:avoid; page-break-inside:avoid; }
+    #printArea .code-badge{ font-size:24px; font-weight:400; }
+    #printArea .rank-badge{ width:40px; height:40px; font-size:24px; background:transparent !important; border:1.5px solid #000; margin-right:8px; }
+    #printArea .empty-state{ font-size:24px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="lockScreen" class="hidden">
+  <img src="icon-192.png" alt="Party" class="lock-avatar">
+  <div>
+    <h2>Party</h2>
+    <p>This app is locked. Unlock with your fingerprint to continue.</p>
+  </div>
+  <button class="fp-btn" id="fpUnlockBtn" title="Unlock with fingerprint">👆</button>
+  <div id="lockError"></div>
+  <div id="pinArea" style="display:none">
+    <div class="pin-wrap" id="pinInputs">
+      <input type="password" inputmode="numeric" maxlength="1">
+      <input type="password" inputmode="numeric" maxlength="1">
+      <input type="password" inputmode="numeric" maxlength="1">
+      <input type="password" inputmode="numeric" maxlength="1">
+    </div>
+  </div>
+  <button class="lock-alt" id="pinToggleBtn">Unlock with PIN</button>
+</div>
+
+<header class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <img src="icon-192.png" alt="Glass" class="mark">
+      <div>
+        <h1>Glass</h1>
+        <div class="sub">Party — Distributor Accounts</div>
+      </div>
+    </div>
+    <button class="install-btn" id="installBtn" style="display:none">⬇️ Install</button>
+  </div>
+</header>
+
+<!-- DASHBOARD -->
+<main id="view-dashboard" class="view active">
+  <div class="card">
+    <h2><span class="dot"></span>Find Party</h2>
+    <div class="picker">
+      <input type="text" id="partySearch" placeholder="Enter party name or code..." autocomplete="off">
+      <button class="clear" id="partyClearBtn">✕</button>
+      <div class="picker-list" id="partyPickerList"></div>
+    </div>
+  </div>
+
+  <div id="dashboardBody"></div>
+</main>
+
+<!-- DATA ENTRY -->
+<main id="view-entry" class="view">
+  <div class="card">
+    <h2><span class="dot"></span><span id="entryFormTitle">New Entry</span></h2>
+    <form id="entryForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Party / Distributor *</label>
+          <div class="picker">
+            <input type="text" id="f_party" placeholder="Search by name or code..." autocomplete="off" required>
+            <div class="picker-list" id="f_partyList"></div>
+          </div>
+          <div class="inline-add" id="f_partyAddWrap" style="display:none">
+            <input type="text" id="f_partyNewName" placeholder="New party name">
+            <input type="text" id="f_partyNewCode" placeholder="Code" style="max-width:90px">
+            <button type="button" class="btn btn-sm btn-cyan" id="f_partyAddBtn">Add</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>DO No.</label>
+          <input type="text" id="f_do" placeholder="e.g. 192">
+        </div>
+        <div class="field">
+          <label>Date *</label>
+          <input type="date" id="f_date" required>
+        </div>
+
+        <div class="field">
+          <label>Gross Amount (৳) *</label>
+          <input type="number" step="0.01" id="f_gross" required>
+        </div>
+        <div class="field">
+          <label>1% Less (৳)</label>
+          <div style="display:flex; gap:6px">
+            <input type="number" step="0.01" id="f_less1" style="flex:1">
+            <button type="button" class="btn btn-sm btn-ghost" id="f_less1AutoBtn" title="Recalculate automatically from gross">🔄 Auto</button>
+          </div>
+          <span class="hint">Calculated automatically when gross is entered (gross − 1%)</span>
+        </div>
+
+        <div class="field">
+          <label>Net Amount (৳)</label>
+          <input type="number" step="0.01" id="f_net">
+          <span class="hint">Enter manually</span>
+        </div>
+        <div class="field">
+          <label>CR — Balance adjustment (৳)</label>
+          <input type="number" step="0.01" id="f_cr">
+        </div>
+
+        <div class="field">
+          <label>Bank Payment (৳)</label>
+          <input type="number" step="0.01" id="f_bankPayment">
+        </div>
+        <div class="field full">
+          <label>Bank Name</label>
+          <select id="f_bankName">
+            <option value="">— Select —</option>
+          </select>
+          <div class="inline-add" id="f_bankAddWrap" style="display:none">
+            <input type="text" id="f_bankNewName" placeholder="New bank name">
+            <button type="button" class="btn btn-sm btn-cyan" id="f_bankAddBtn">Add</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Weight (tons)</label>
+          <input type="number" step="0.01" id="f_weight">
+        </div>
+        <div class="field">
+          <label>Commission</label>
+          <input type="text" id="f_commission" placeholder="e.g. 1+20">
+          <span class="hint">For notes only — not added to the totals</span>
+        </div>
+
+        <div class="field full">
+          <label>Note</label>
+          <input type="text" id="f_note" placeholder="Optional comment">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="entrySaveBtn">💾 Save Entry</button>
+        <button type="button" class="btn btn-ghost" id="entryResetBtn">✕ Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>Recent Entries</h2>
+    <div class="search-row">
+      <input type="text" id="entrySearch" placeholder="Search by party, code, date or DO...">
+    </div>
+    <div class="table-scroll">
+      <table class="entries">
+        <thead>
+          <tr>
+            <th>Date</th><th>Party</th><th>DO</th><th>Comm</th><th>Gross</th><th>Net</th><th>Bank</th><th>CR</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="entriesTbody"></tbody>
+      </table>
+    </div>
+    <div class="entries-note" id="entriesCount"></div>
+  </div>
+</main>
+
+<!-- SETTINGS -->
+<main id="view-settings" class="view">
+  <div class="card">
+    <h2><span class="dot"></span>Party List</h2>
+    <div id="partyListWrap"></div>
+    <div class="section-gap">
+      <div class="small-title">Add New Party</div>
+      <div class="field-row">
+        <div class="field"><input type="text" id="s_partyName" placeholder="Party name"></div>
+        <div class="field" style="max-width:110px"><input type="text" id="s_partyCode" placeholder="Code"></div>
+      </div>
+      <button class="btn btn-cyan btn-block" id="s_partyAddBtn">+ Add Party</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>Bank List</h2>
+    <div id="bankListWrap"></div>
+    <div class="section-gap">
+      <div class="field-row">
+        <div class="field"><input type="text" id="s_bankName" placeholder="Bank Name"></div>
+        <button class="btn btn-cyan" id="s_bankAddBtn" style="height:44px; margin-top:auto">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>Security Lock</h2>
+    <p class="hint muted" style="font-size:12.5px; margin-bottom:10px">The app will ask for fingerprint/face unlock when opened. It uses your phone or browser biometrics (no data leaves your device). A PIN must be set for this (if the fingerprint does not work, you can unlock with the PIN).</p>
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <button class="btn btn-cyan btn-block" id="setupFpBtn">👆 Enable Fingerprint</button>
+      <button class="btn btn-ghost btn-block" id="setupPinBtn">🔢 Set / Change PIN</button>
+      <button class="btn btn-danger btn-block" id="disableLockBtn" style="display:none">🔓 Turn Off Lock</button>
+    </div>
+    <p id="lockStatus" class="hint muted" style="margin-top:10px; font-size:11.5px"></p>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>Install App</h2>
+    <p class="hint muted" style="font-size:12.5px; margin-bottom:10px">Install the Party app on your home screen so you can open it easily — it also works without internet. If you uninstalled it earlier, tap the button below to install it again.</p>
+    <button class="btn btn-cyan btn-block" id="settingsInstallBtn">⬇ Install App</button>
+    <p id="installHint" class="hint muted" style="margin-top:10px; font-size:11.5px"></p>
+    <button class="btn btn-ghost btn-block" id="runDiagBtn" style="margin-top:10px">🔍 Check install problems</button>
+    <div id="diagResult" style="margin-top:10px; display:none"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>Data Sync (Phone ⇄ Computer)</h2>
+    <p class="hint muted" style="font-size:12.5px; margin-bottom:10px">Enter a sync code. The data stays the same on every device (phone, computer) that uses the same code and updates instantly. Remember the code — it works like your password.</p>
+    <div class="field-row">
+      <div class="field"><input type="text" id="syncCodeInput" placeholder="Sync code (e.g. NASIR2024)"></div>
+      <button class="btn btn-cyan" id="syncStartBtn" style="height:44px; margin-top:auto">Start</button>
+    </div>
+    <button class="btn btn-danger btn-block" id="syncStopBtn" style="display:none; margin-top:10px">Stop Sync</button>
+    <p id="syncStatus" class="hint muted" style="margin-top:10px; font-size:11.5px">Sync is off</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>Data Management</h2>
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <button class="btn btn-ghost btn-block" id="exportBtn">⬇ Backup Export (JSON)</button>
+      <label class="btn btn-ghost btn-block" style="cursor:pointer">
+        ⬆ Import Backup
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+      </label>
+      <button class="btn btn-ghost btn-block" id="exportCsvBtn">📄 CSV Export</button>
+      <button class="btn btn-danger btn-block" id="resetBtn">⚠ Erase all data and start fresh</button>
+    </div>
+    <p class="hint muted" style="margin-top:10px; font-size:11.5px">All data is stored on your device only (localStorage). Export a backup regularly.</p>
+  </div>
+</main>
+
+<nav class="bottomnav">
+  <button class="navbtn active" data-view="dashboard"><span class="ic">📊</span><span class="tx">Dashboard</span></button>
+  <button class="navbtn" data-view="entry"><span class="ic">✏️</span><span class="tx">Data Entry</span></button>
+  <button class="navbtn" data-view="settings"><span class="ic">⚙️</span><span class="tx">Settings</span></button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+const SEED = {"entries": [], "parties": [], "banks": []};
+
+const SHOP_ID_LOCAL = (function(){ try{ return (new URLSearchParams(location.search).get('shop')||'').trim(); }catch(e){ return ''; } })();
+const DB_KEY = 'ngh_db_v1' + (SHOP_ID_LOCAL ? '_' + SHOP_ID_LOCAL : '');
+const MONTH_BN = {January:'Jan',February:'Feb',March:'Mar',April:'Apr',May:'May',June:'Jun',July:'Jul',August:'Aug',September:'Sep',October:'Oct',November:'Nov',December:'Dec'};
+const MONTH_ORDER = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  const fresh = JSON.parse(JSON.stringify(SEED));
+  localStorage.setItem(DB_KEY, JSON.stringify(fresh));
+  return fresh;
+}
+function saveDB(skipPush){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); if(!skipPush && !applyingRemote) pushToCloud(); }
+
+let DB = loadDB();
+let selectedPartyCode = null; // dashboard selection
+let statementFromYM = ''; let statementToYM = ''; // per-party statement custom month range, e.g. '2026-06'..'2027-06'
+let selectedYearMonth = ''; // '' or a "YYYY-MM" picked from the all-parties monthly summary table
+let rangeFromMonth = ''; let rangeToMonth = ''; // party-wise ranking over a custom "YYYY-MM" range
+let editingEntryId = null;
+
+function uid(){ return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmt(n){ n = Number(n)||0; return n.toLocaleString('en-US', {maximumFractionDigits:2}); }
+function fmtMoney(n){ return '৳' + fmt(n); }
+function monthOf(dateStr){
+  const idx = new Date(dateStr+'T00:00:00').getMonth();
+  return MONTH_ORDER[idx] || '';
+}
+/* Year-aware month key ("YYYY-MM") — needed so months don't collide across different years
+   (e.g. January 2026 and January 2027 must be counted/filtered separately). */
+function ymOf(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function ymLabel(ym){
+  if(!ym) return '';
+  const [y,m] = ym.split('-');
+  const name = MONTH_ORDER[parseInt(m,10)-1] || m;
+  return `${MONTH_BN[name]||name} ${y}`;
+}
+function ymRangeLabel(from,to){
+  if(!from && !to) return 'All time';
+  if(from && to) return from===to ? ymLabel(from) : `${ymLabel(from)} – ${ymLabel(to)}`;
+  if(from) return `From ${ymLabel(from)}`;
+  return `Until ${ymLabel(to)}`;
+}
+function allYearMonths(entries){
+  const set = new Set((entries||DB.entries).map(e=>ymOf(e.date)));
+  return Array.from(set).sort(); // "YYYY-MM" strings sort chronologically as plain strings
+}
+function filterByYMRange(entries, from, to){
+  if(!from && !to) return entries;
+  return entries.filter(e=>{
+    const ym = ymOf(e.date);
+    if(from && ym < from) return false;
+    if(to && ym > to) return false;
+    return true;
+  });
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------- Cloud sync (Firebase Firestore) ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDM7Ih6vwpdOEqCPywkufHkCsU13B2uxhg",
+  authDomain: "glass-party-app.firebaseapp.com",
+  projectId: "glass-party-app",
+  storageBucket: "glass-party-app.firebasestorage.app",
+  messagingSenderId: "828378385432",
+  appId: "1:828378385432:web:b13034a4408cc3a089476d"
+};
+let firestore = null;
+try{
+  firebase.initializeApp(firebaseConfig);
+  firebase.auth();
+  firestore = firebase.firestore();
+}catch(e){ /* firebase failed to load (offline) - sync will be unavailable */ }
+
+const SYNC_KEY = 'ddb_sync_code' + (SHOP_ID_LOCAL ? '_' + SHOP_ID_LOCAL : '');
+let syncUnsub = null;
+let applyingRemote = false;
+let pushTimer = null;
+
+function getSyncCode(){ return localStorage.getItem(SYNC_KEY) || ''; }
+function updateSyncStatus(msg){
+  const el = document.getElementById('syncStatus');
+  if(el) el.textContent = msg;
+}
+function pushToCloud(){
+  const code = getSyncCode();
+  if(!code || !firestore) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(()=>{
+    firestore.collection('syncs').doc(code).set({ db: DB, updatedAt: Date.now() })
+      .then(()=> updateSyncStatus('Synced ✓ ' + new Date().toLocaleTimeString('en-GB')))
+      .catch(err=> updateSyncStatus('Upload problem: ' + err.message));
+  }, 800);
+}
+function startSync(code){
+  if(!firestore){ toast('Sync could not load, check your internet'); return; }
+  if(syncUnsub){ syncUnsub(); syncUnsub = null; }
+  localStorage.setItem(SYNC_KEY, code);
+  updateSyncStatus('Connecting sync...');
+  const docRef = firestore.collection('syncs').doc(code);
+  syncUnsub = docRef.onSnapshot(snap=>{
+    if(snap.exists){
+      const remote = snap.data();
+      if(remote && remote.db){
+        applyingRemote = true;
+        DB = remote.db;
+        DB.banks = DB.banks || [];
+        saveDB(true);
+        selectedPartyCode = null;
+        renderDashboard();
+        renderSettings();
+        renderEntryPartyOptions();
+        renderBankOptions();
+        renderEntriesTable();
+        applyingRemote = false;
+        updateSyncStatus('Sync updated ✓ ' + new Date().toLocaleTimeString('en-GB'));
+      }
+    } else {
+      pushToCloud();
+    }
+  }, err=>{
+    updateSyncStatus('Sync problem: ' + err.message);
+  });
+}
+function stopSync(){
+  if(syncUnsub){ syncUnsub(); syncUnsub = null; }
+  localStorage.removeItem(SYNC_KEY);
+  updateSyncStatus('Sync is off');
+}
+
+document.getElementById('syncStartBtn').addEventListener('click', ()=>{
+  const code = document.getElementById('syncCodeInput').value.trim();
+  if(!code || code.length<4){ toast('Enter a code of at least 4 characters'); return; }
+  startSync(code);
+  document.getElementById('syncStopBtn').style.display='block';
+  toast('Starting sync...');
+});
+document.getElementById('syncStopBtn').addEventListener('click', ()=>{
+  if(!confirm('Stop sync? Local data will stay but will no longer auto-update.')) return;
+  stopSync();
+  document.getElementById('syncStopBtn').style.display='none';
+  document.getElementById('syncCodeInput').value='';
+});
+
+/* ---------- Navigation ---------- */
+document.querySelectorAll('.navbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  if(name==='dashboard') renderDashboard();
+  if(name==='entry') { renderEntryPartyOptions(); renderBankOptions(); renderEntriesTable(); }
+  if(name==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+
+/* ---------- Dashboard: party combobox ---------- */
+const partySearch = document.getElementById('partySearch');
+const partyPickerList = document.getElementById('partyPickerList');
+const partyClearBtn = document.getElementById('partyClearBtn');
+
+function partyMatches(query){
+  const q = query.trim().toLowerCase();
+  let list = DB.parties.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(!q) return list;
+  // Codes are stored as plain numbers (509, not 0509), but people naturally
+  // type a leading zero when searching (e.g. "0509"). Compare the query
+  // against the code as-is, with its leading zeros stripped, AND against the
+  // code zero-padded to 4 digits, so it matches either way it's typed.
+  const qStripped = q.replace(/^0+(?=\d)/, '');
+  return list.filter(p => {
+    if(p.name.toLowerCase().includes(q)) return true;
+    const codeStr = String(p.code);
+    const codePadded = codeStr.padStart(4, '0');
+    return codeStr.includes(q) || codeStr.includes(qStripped) || codePadded.includes(q);
+  });
+}
+function openPartyPicker(query){
+  const matches = partyMatches(query||'');
+  if(matches.length===0){
+    partyPickerList.innerHTML = '<div class="picker-empty">No party found</div>';
+  } else {
+    partyPickerList.innerHTML = matches.map(p=>{
+      const cnt = DB.entries.filter(e=>e.code===p.code).length;
+      return `<div class="picker-item" data-code="${p.code}"><span>${p.name}</span><span class="code">#${p.code} · ${cnt} entries</span></div>`;
+    }).join('');
+  }
+  partyPickerList.classList.add('show');
+}
+partySearch.addEventListener('focus', ()=> openPartyPicker(partySearch.value));
+partySearch.addEventListener('input', ()=> openPartyPicker(partySearch.value));
+partyPickerList.addEventListener('click', (e)=>{
+  const item = e.target.closest('.picker-item');
+  if(!item) return;
+  selectPartyForDashboard(Number(item.dataset.code));
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.picker')) partyPickerList.classList.remove('show');
+});
+partyClearBtn.addEventListener('click', ()=>{
+  selectedPartyCode = null;
+  statementFromYM = ''; statementToYM = '';
+  partySearch.value = '';
+  partyClearBtn.classList.remove('show');
+  renderDashboard();
+});
+function selectPartyForDashboard(code){
+  selectedPartyCode = code;
+  statementFromYM = ''; statementToYM = '';
+  const p = DB.parties.find(p=>p.code===code);
+  partySearch.value = p ? `${p.name} (#${p.code})` : '';
+  partyPickerList.classList.remove('show');
+  partyClearBtn.classList.add('show');
+  renderDashboard();
+}
+
+function setStatementRange(from, to){
+  statementFromYM = from || '';
+  statementToYM = to || '';
+  renderDashboard();
+}
+
+/* ---------- Dashboard render ---------- */
+function computeTotals(entries){
+  return entries.reduce((acc,e)=>{
+    acc.count++; acc.gross+=e.gross||0; acc.less1+=e.less1||0; acc.net+=e.net||0;
+    acc.bank+=e.bankPayment||0; acc.cr+=e.cr||0; acc.weight+=e.weight||0;
+    return acc;
+  }, {count:0,gross:0,less1:0,net:0,bank:0,cr:0,weight:0});
+}
+
+function renderDashboard(){
+  const body = document.getElementById('dashboardBody');
+  if(!selectedPartyCode){
+    renderAllPartiesView(body);
+    return;
+  }
+  const party = DB.parties.find(p=>p.code===selectedPartyCode);
+  const allEntries = DB.entries.filter(e=>e.code===selectedPartyCode).sort((a,b)=> a.date.localeCompare(b.date) || String(a.do).localeCompare(String(b.do)));
+
+  const monthly = {};
+  allEntries.forEach(e=>{
+    const ym = ymOf(e.date);
+    if(!monthly[ym]) monthly[ym] = 0;
+    monthly[ym] += e.net||0;
+  });
+  const ymKeys = allYearMonths(allEntries); // chronological "YYYY-MM" list, spans any number of years
+  const maxMonthly = Math.max(1, ...ymKeys.map(ym=>monthly[ym]));
+
+  // custom month-range filter (applies to statement table + totals + WhatsApp share, not the chart above)
+  if(statementFromYM && !ymKeys.includes(statementFromYM)) statementFromYM = '';
+  if(statementToYM && !ymKeys.includes(statementToYM)) statementToYM = '';
+  const entries = filterByYMRange(allEntries, statementFromYM, statementToYM);
+  const totals = computeTotals(entries);
+  const periodLabel = ymRangeLabel(statementFromYM, statementToYM);
+  const hasStmtFilter = !!(statementFromYM || statementToYM);
+
+  let html = '';
+  html += `<div class="kpi-grid">
+    <div class="kpi navy"><div class="label">Total Entries</div><div class="value">${totals.count}<small>  entries</small></div></div>
+    <div class="kpi"><div class="label">Total Gross</div><div class="value">${fmtMoney(totals.gross)}</div></div>
+    <div class="kpi good"><div class="label">Total Net</div><div class="value">${fmtMoney(totals.net)}</div></div>
+    <div class="kpi amber"><div class="label">Total Bank Payment</div><div class="value">${fmtMoney(totals.bank)}</div></div>
+    <div class="kpi amber"><div class="label">Total CR (balance adjustment)</div><div class="value">${fmtMoney(totals.cr)}</div></div>
+    <div class="kpi"><div class="label">Total Weight</div><div class="value">${fmt(totals.weight)}<small> tons</small></div></div>
+  </div>`;
+
+  html += `<div class="card">
+    <h2><span class="dot"></span>Monthly Net Amount</h2>
+    ${ymKeys.length? `<div class="chart-wrap">${ymKeys.map(ym=>{
+        const h = Math.max(6, Math.round((monthly[ym]/maxMonthly)*120));
+        return `<div class="chart-bar-col"><div class="amt">${fmt(monthly[ym]/1000)}k</div><div class="chart-bar" style="height:${h}px" title="${ymLabel(ym)}: ${fmtMoney(monthly[ym])}"></div><div class="m">${ymLabel(ym)}</div></div>`;
+      }).join('')}</div>` : `<div class="chart-empty">No data yet</div>`}
+  </div>`;
+
+  const stmtFromOpts = ymKeys.map(ym=>`<option value="${ym}"${statementFromYM===ym?' selected':''}>${ymLabel(ym)}</option>`).join('');
+  const stmtToOpts = ymKeys.map(ym=>`<option value="${ym}"${statementToYM===ym?' selected':''}>${ymLabel(ym)}</option>`).join('');
+
+  html += `<div class="statement" id="printArea">
+    <div class="statement-head">
+      <div class="flex-between">
+        <div>
+          <h3>Distributor Statement — ${party ? party.name : ''}</h3>
+          <div class="meta"><span>Party Code: <b>#${selectedPartyCode}</b></span><span>Period: <b>${periodLabel}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+        </div>
+      </div>
+      <div class="range-filter no-print">
+        <div class="rf-field"><label>From</label><select id="stmtFromSelect" onchange="setStatementRange(this.value, statementToYM)"><option value="">From the start</option>${stmtFromOpts}</select></div>
+        <div class="rf-field"><label>To</label><select id="stmtToSelect" onchange="setStatementRange(statementFromYM, this.value)"><option value="">Until the end</option>${stmtToOpts}</select></div>
+        ${hasStmtFilter ? `<button class="btn btn-ghost btn-sm" onclick="setStatementRange('','')">✕ All time</button>` : ''}
+      </div>
+    </div>
+    ${entries.length? renderStatementTable(entries, totals) : `<div class="empty-state"><div class="big">🧾</div><p>${hasStmtFilter? 'No entries were found for this party in this period.' : 'No entries were found for this party.'}</p></div>`}
+    <div class="stmt-actions">
+      <button class="btn btn-cyan" onclick="saveStatementPDF(${selectedPartyCode})">🖨️ Print / PDF</button>
+      <button class="btn" style="background:linear-gradient(155deg,#2FDB77,#1EA858 85%);color:#04331a" onclick="shareStatementWhatsApp(${selectedPartyCode})">🟢 ${hasStmtFilter? periodLabel+' Share' : 'Share on WhatsApp'}</button>
+      <button class="btn btn-ghost" onclick="goAddEntryFor(${selectedPartyCode})">+ Add an entry for this party</button>
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+}
+
+function renderStatementTable(entries, totals){
+  const rows = entries.map(e=>`
+    <tr>
+      <td class="dt">${e.date}</td>
+      <td>${e.do||'—'}</td>
+      <td>${e.commission||'—'}</td>
+      <td>${fmt(e.gross)}</td>
+      <td>${fmt(e.less1)}</td>
+      <td>${fmt(e.net)}</td>
+      <td>${fmt(e.bankPayment)}</td>
+      <td>${e.bankName||'—'}</td>
+      <td class="cr">${e.cr? fmt(e.cr) : '—'}</td>
+      <td>${e.weight? fmt(e.weight): '—'}</td>
+    </tr>`).join('');
+  return `<div class="stmt-table-wrap"><table class="stmt stmt-party">
+    <thead><tr><th>Date</th><th>DO No.</th><th>Commission</th><th>Gross</th><th>1% Less</th><th>Net</th><th>Bank Payment</th><th>Bank</th><th>CR</th><th>Weight</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="3">Grand Total</td><td>${fmt(totals.gross)}</td><td>${fmt(totals.less1)}</td><td>${fmt(totals.net)}</td><td>${fmt(totals.bank)}</td><td>—</td><td>${fmt(totals.cr)}</td><td>${fmt(totals.weight)}</td></tr></tfoot>
+  </table></div>`;
+}
+
+function renderAllPartiesView(body){
+  const totals = computeTotals(DB.entries);
+  let html = `<div class="kpi-grid">
+    <div class="kpi navy"><div class="label">Total Entries</div><div class="value">${totals.count}<small>  entries</small></div></div>
+    <div class="kpi"><div class="label">Total Gross</div><div class="value">${fmtMoney(totals.gross)}</div></div>
+    <div class="kpi good"><div class="label">Total Net</div><div class="value">${fmtMoney(totals.net)}</div></div>
+    <div class="kpi amber"><div class="label">Total Bank Payment</div><div class="value">${fmtMoney(totals.bank)}</div></div>
+  </div>`;
+
+  /* Month-by-month summary across ALL parties — always visible so you can see at a glance
+     how much was sold each month (amount + tonnage). Spans however many months/years exist
+     in the data (not locked to the current calendar year), so it keeps working correctly
+     once entries cross into a new year. */
+  const curYM = ymOf(new Date().toISOString().slice(0,10));
+  const allYM = allYearMonths(DB.entries);
+  const monthlyAll = {};
+  allYM.forEach(ym => monthlyAll[ym] = {count:0, gross:0, net:0, bank:0, weight:0});
+  DB.entries.forEach(e=>{
+    const ym = ymOf(e.date);
+    if(monthlyAll[ym]){
+      const b = monthlyAll[ym];
+      b.count++; b.gross += e.gross||0; b.net += e.net||0; b.bank += e.bankPayment||0; b.weight += e.weight||0;
+    }
+  });
+  const yearTotals = Object.values(monthlyAll).reduce((acc,b)=>{
+    acc.count+=b.count; acc.gross+=b.gross; acc.net+=b.net; acc.bank+=b.bank; acc.weight+=b.weight;
+    return acc;
+  }, {count:0,gross:0,net:0,bank:0,weight:0});
+
+  html += `<div class="card">
+    <h2><span class="dot"></span>Monthly Sales Summary (all parties combined)</h2>
+    <div class="table-scroll"><table class="year" id="yearTable">
+      <thead><tr><th>Month</th><th>Entries</th><th>Gross</th><th>Net</th><th>Bank Payment</th><th>Weight (tons)</th></tr></thead>
+      <tbody>${allYM.map(ym=>{
+        const b = monthlyAll[ym];
+        const cls = [ym===curYM?'cur-month':'', ym===selectedYearMonth?'sel-month':''].filter(Boolean).join(' ');
+        return `<tr class="${cls}" data-month="${ym}"><td>${ymLabel(ym)}</td><td>${b.count}</td><td>${fmt(b.gross)}</td><td>${fmt(b.net)}</td><td>${fmt(b.bank)}</td><td>${fmt(b.weight)}</td></tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr><td>Grand Total</td><td>${yearTotals.count}</td><td>${fmt(yearTotals.gross)}</td><td>${fmt(yearTotals.net)}</td><td>${fmt(yearTotals.bank)}</td><td>${fmt(yearTotals.weight)}</td></tr></tfoot>
+    </table></div>
+    <p class="hint muted" style="margin-top:10px">Tap any month to see all parties’ entries for that month below — you can print/PDF or share it on WhatsApp</p>
+  </div>`;
+
+  if(selectedYearMonth){
+    const monthEntries = DB.entries.filter(e=> ymOf(e.date)===selectedYearMonth).sort((a,b)=> a.date.localeCompare(b.date) || String(a.party||'').localeCompare(String(b.party||'')));
+    const monthTotals = computeTotals(monthEntries);
+    const mLabel = ymLabel(selectedYearMonth);
+    html += `<div class="statement" id="printArea">
+      <div class="statement-head">
+        <div class="flex-between">
+          <div>
+            <h3>Monthly Entries — ${mLabel} (All Parties)</h3>
+            <div class="meta"><span>Total Entries: <b>${monthTotals.count}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+          </div>
+        </div>
+      </div>
+      ${monthEntries.length? renderMonthAllPartiesTable(monthEntries, monthTotals) : `<div class="empty-state"><div class="big">🧾</div><p>No entries were found for this month.</p></div>`}
+      <div class="stmt-actions">
+        <button class="btn btn-cyan" onclick="saveMonthAllPartiesPDF('${selectedYearMonth}')">🖨️ Print / PDF</button>
+        <button class="btn" style="background:linear-gradient(155deg,#2FDB77,#1EA858 85%);color:#04331a" onclick="shareMonthAllPartiesWhatsApp('${selectedYearMonth}')">🟢 ${mLabel} Share Month</button>
+        <button class="btn btn-ghost" onclick="setYearMonth('')">✕ Close</button>
+      </div>
+    </div>`;
+  }
+
+  const byParty = {};
+  DB.entries.forEach(e=>{
+    if(!byParty[e.code]) byParty[e.code] = {code:e.code, name:e.party, count:0, gross:0, net:0, bank:0};
+    const b = byParty[e.code];
+    b.count++; b.gross+=e.gross||0; b.net+=e.net||0; b.bank+=e.bankPayment||0;
+  });
+  const list = Object.values(byParty).sort((a,b)=> b.net - a.net);
+
+  /* Custom month-range party ranking — pick "from" and "to" (month + year, e.g. Jun 2026 – Jun 2027)
+     and see which party sold how much during exactly that window, even across a year boundary. */
+  const fromOpts = allYM.map(ym=>`<option value="${ym}"${rangeFromMonth===ym?' selected':''}>${ymLabel(ym)}</option>`).join('');
+  const toOpts = allYM.map(ym=>`<option value="${ym}"${rangeToMonth===ym?' selected':''}>${ymLabel(ym)}</option>`).join('');
+  html += `<div class="card">
+    <h2><span class="dot"></span>Party-wise Sales Ranking for a Custom Period</h2>
+    <div class="range-filter">
+      <div class="rf-field"><label>From</label><select id="rfFrom" onchange="setPartyRange(this.value, rangeToMonth)"><option value="">Month</option>${fromOpts}</select></div>
+      <div class="rf-field"><label>To</label><select id="rfTo" onchange="setPartyRange(rangeFromMonth, this.value)"><option value="">Month</option>${toOpts}</select></div>
+      ${(rangeFromMonth && rangeToMonth) ? `<button class="btn btn-ghost btn-sm" onclick="setPartyRange('','')">✕ Reset</button>` : ''}
+    </div>`;
+
+  if(rangeFromMonth && rangeToMonth){
+    if(rangeFromMonth <= rangeToMonth){
+      const rangeEntries = filterByYMRange(DB.entries, rangeFromMonth, rangeToMonth);
+      const byPartyRange = {};
+      rangeEntries.forEach(e=>{
+        if(!byPartyRange[e.code]) byPartyRange[e.code] = {code:e.code, name:e.party, count:0, gross:0, net:0, bank:0, cr:0, weight:0};
+        const b = byPartyRange[e.code];
+        b.count++; b.gross+=e.gross||0; b.net+=e.net||0; b.bank+=e.bankPayment||0; b.cr+=e.cr||0; b.weight+=e.weight||0;
+      });
+      const rangeList = Object.values(byPartyRange).sort((a,b)=> b.net - a.net);
+      const rangeTotals = computeTotals(rangeEntries);
+      const rangeLabel = ymRangeLabel(rangeFromMonth, rangeToMonth);
+
+      html += `<div class="statement" id="printArea" style="margin-top:6px">
+        <div class="statement-head">
+          <h3>Party-wise Sales Ranking — ${rangeLabel}</h3>
+          <div class="meta"><span>Total Parties: <b>${rangeList.length}</b></span><span>Total Entries: <b>${rangeTotals.count}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+        </div>
+        ${rangeList.length? `<div class="stmt-table-wrap"><table class="stmt">
+          <thead><tr><th>Party</th><th>Entries</th><th>Gross</th><th>Net</th><th>Bank Payment</th><th>CR</th><th>Weight</th></tr></thead>
+          <tbody>${rangeList.map((b,i)=>{
+            const rc = i===0?'top1':i===1?'top2':i===2?'top3':'';
+            return `<tr><td><span class="rank-badge ${rc}">${i+1}</span>${b.name}<div class="code-badge">#${b.code}</div></td><td>${b.count}</td><td>${fmt(b.gross)}</td><td>${fmt(b.net)}</td><td>${fmt(b.bank)}</td><td>${b.cr?fmt(b.cr):'—'}</td><td>${fmt(b.weight)}</td></tr>`;
+          }).join('')}</tbody>
+          <tfoot><tr><td>Grand Total</td><td>${rangeTotals.count}</td><td>${fmt(rangeTotals.gross)}</td><td>${fmt(rangeTotals.net)}</td><td>${fmt(rangeTotals.bank)}</td><td>${fmt(rangeTotals.cr)}</td><td>${fmt(rangeTotals.weight)}</td></tr></tfoot>
+        </table></div>` : `<div class="empty-state"><div class="big">🧾</div><p>No entries were found in this period.</p></div>`}
+        <div class="stmt-actions">
+          <button class="btn btn-cyan" onclick="savePartyRangePDF('${rangeFromMonth}','${rangeToMonth}')">🖨️ Print / PDF</button>
+          <button class="btn" style="background:linear-gradient(155deg,#2FDB77,#1EA858 85%);color:#04331a" onclick="sharePartyRangeWhatsApp('${rangeFromMonth}','${rangeToMonth}')">🟢 Share on WhatsApp</button>
+        </div>
+      </div>`;
+    } else {
+      html += `<p class="hint" style="color:#C1382E">The "To" month cannot be earlier than the "From" month.</p>`;
+    }
+  } else {
+    html += `<p class="hint muted">Choose the "From" and "To" months to see a ranking of how much each party bought in that period — even across two different years (e.g. June 2026 – June 2027).</p>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="card">
+    <h2><span class="dot"></span>All Distributors Summary</h2>
+    ${list.length? `<div class="table-scroll"><table class="plist">
+      <thead><tr><th>Party</th><th>Entries</th><th>Net</th><th></th></tr></thead>
+      <tbody>${list.map(b=>`<tr data-code="${b.code}"><td>${b.name}<div class="code-badge">#${b.code}</div></td><td>${b.count}</td><td>${fmt(b.net)}</td><td style="text-align:center"><button class="icon-btn" style="background:#DFF7E7;color:#0F7A3C" onclick="event.stopPropagation(); shareStatementWhatsApp(${b.code})" title="Share on WhatsApp">🟢</button></td></tr>`).join('')}</tbody>
+    </table></div>
+    <p class="hint muted" style="margin-top:10px">Tap a party to see its detailed statement</p>`
+    : `<div class="empty-state"><div class="big">📋</div><p>No data yet. Start from "Data Entry".</p></div>`}
+  </div>`;
+
+  body.innerHTML = html;
+  body.querySelectorAll('table.plist tr[data-code]').forEach(tr=>{
+    tr.addEventListener('click', ()=> selectPartyForDashboard(Number(tr.dataset.code)));
+  });
+  body.querySelectorAll('table.year tbody tr[data-month]').forEach(tr=>{
+    tr.addEventListener('click', ()=> setYearMonth(tr.dataset.month));
+  });
+}
+
+function setYearMonth(m){
+  selectedYearMonth = (m && m===selectedYearMonth) ? '' : (m||'');
+  if(selectedYearMonth){ rangeFromMonth=''; rangeToMonth=''; }
+  renderDashboard();
+  if(selectedYearMonth){
+    setTimeout(()=>{ const el = document.getElementById('printArea'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
+  }
+}
+
+function setPartyRange(from, to){
+  rangeFromMonth = from || '';
+  rangeToMonth = to || '';
+  if(rangeFromMonth || rangeToMonth){ selectedYearMonth = ''; }
+  renderDashboard();
+  if(rangeFromMonth && rangeToMonth){
+    setTimeout(()=>{ const el = document.getElementById('printArea'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
+  }
+}
+
+/* Wait for the print fonts, and pick a canvas scale that stays sharp but never too big for a phone browser */
+async function docFontsReady(){
+  try{
+    if(document.fonts){
+      await Promise.all([
+        document.fonts.load('400 24px "Tinos"'), document.fonts.load('700 24px "Tinos"'),
+        document.fonts.load('400 24px "Tiro Bangla"'),
+        document.fonts.load('400 24px "Hind Siliguri"'), document.fonts.load('700 24px "Hind Siliguri"')
+      ]);
+      await document.fonts.ready;
+    }
+  }catch(e){ /* worst case: falls back to a system font */ }
+}
+function docScale(el){
+  const w = el.offsetWidth || 1300, h = el.offsetHeight || 1000;
+  return Math.max(0.5, Math.min(2, Math.sqrt(16e6/(w*h)), 16000/h));
+}
+
+function renderPartyRangeShareTable(rangeList, rangeTotals){
+  return `<div class="stmt-table-wrap"><table class="stmt">
+    <thead><tr><th>Party</th><th>Entries</th><th>Gross</th><th>Net</th><th>Bank Payment</th><th>CR</th><th>Weight</th></tr></thead>
+    <tbody>${rangeList.map((b,i)=>{
+      const rc = i===0?'top1':i===1?'top2':i===2?'top3':'';
+      return `<tr><td><span class="rank-badge ${rc}">${i+1}</span>${b.name}<div class="code-badge">#${b.code}</div></td><td>${b.count}</td><td>${fmt(b.gross)}</td><td>${fmt(b.net)}</td><td>${fmt(b.bank)}</td><td>${b.cr?fmt(b.cr):'—'}</td><td>${fmt(b.weight)}</td></tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr><td>Grand Total</td><td>${rangeTotals.count}</td><td>${fmt(rangeTotals.gross)}</td><td>${fmt(rangeTotals.net)}</td><td>${fmt(rangeTotals.bank)}</td><td>${fmt(rangeTotals.cr)}</td><td>${fmt(rangeTotals.weight)}</td></tr></tfoot>
+  </table></div>`;
+}
+
+async function sharePartyRangeWhatsApp(fromYM, toYM){
+  if(!fromYM || !toYM || fromYM>toYM){ toast('Select a valid month range'); return; }
+  const rangeEntries = filterByYMRange(DB.entries, fromYM, toYM);
+  if(!rangeEntries.length){ toast('No entries in this period'); return; }
+  if(typeof html2canvas !== 'function'){ toast('Image library did not load, check your internet connection'); return; }
+
+  toast('Creating ranking report image...');
+  const byPartyRange = {};
+  rangeEntries.forEach(e=>{
+    if(!byPartyRange[e.code]) byPartyRange[e.code] = {code:e.code, name:e.party, count:0, gross:0, net:0, bank:0, cr:0, weight:0};
+    const b = byPartyRange[e.code];
+    b.count++; b.gross+=e.gross||0; b.net+=e.net||0; b.bank+=e.bankPayment||0; b.cr+=e.cr||0; b.weight+=e.weight||0;
+  });
+  const rangeList = Object.values(byPartyRange).sort((a,b)=> b.net - a.net);
+  const rangeTotals = computeTotals(rangeEntries);
+  const rangeLabel = ymRangeLabel(fromYM, toYM);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'share-card plain';
+  wrap.innerHTML = `
+    <div class="sc-head">
+      <h3>Party-wise Sales Ranking — ${rangeLabel}</h3>
+      <div class="meta"><span>Total Parties: <b>${rangeList.length}</b></span><span>Total Entries: <b>${rangeTotals.count}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+    </div>
+    <div class="sc-summary">
+      <div class="item"><div class="lbl">Total Gross Sales</div><div class="val">${fmtMoney(rangeTotals.gross)}</div></div>
+      <div class="item good"><div class="lbl">Total Net</div><div class="val">${fmtMoney(rangeTotals.net)}</div></div>
+      <div class="item amber"><div class="lbl">Total Bank Payment</div><div class="val">${fmtMoney(rangeTotals.bank)}</div></div>
+      <div class="item"><div class="lbl">Total Weight</div><div class="val">${fmt(rangeTotals.weight)} tons</div></div>
+    </div>
+    <div class="statement">
+      ${renderPartyRangeShareTable(rangeList, rangeTotals)}
+    </div>
+    <div class="sc-foot">Authorized by: Md. Mehedi Hasan · Mob: 01730-273061</div>
+  `;
+  const holder = document.createElement('div');
+  holder.style.position = 'fixed';
+  holder.style.left = '-99999px';
+  holder.style.top = '0';
+  holder.appendChild(wrap);
+  document.body.appendChild(holder);
+
+  try{
+    await docFontsReady();
+    const canvas = await html2canvas(wrap, {scale:docScale(wrap), backgroundColor:'#ffffff', useCORS:true});
+    document.body.removeChild(holder);
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ toast('Image creation failed'); return; }
+      const fileName = `party-ranking-${fromYM}-to-${toYM}-${Date.now()}.png`;
+      const file = new File([blob], fileName, {type:'image/png'});
+      const shareText = `Party-wise Sales Ranking — ${rangeLabel}`;
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({files:[file], title:shareText, text:shareText});
+        }catch(err){ /* user cancelled the share sheet, nothing to do */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=> URL.revokeObjectURL(url), 8000);
+        toast('Image downloaded — go to the WhatsApp chat, attach the image and send it');
+        openWhatsApp(shareText);
+      }
+    }, 'image/png');
+  }catch(err){
+    if(holder.parentNode) document.body.removeChild(holder);
+    toast('Could not create the image, please try again');
+  }
+}
+
+// Real, correctly-paginated PDF (instead of one flat PNG image that a phone's generic image-print
+// later cuts across several oddly-sized pages). Breaks pages only at the bottom of a table row, so a
+// line of text is never sliced in half, and shrinks the image just enough to use A4 fully — matching
+// how "Save PDF" already works in the other Glass apps.
+function planPdfPages(totalH, sliceMax, breaks){
+  const pages = []; let start = 0;
+  while(start < totalH - 1){
+    let end = Math.min(start + sliceMax, totalH);
+    if(end < totalH){
+      let best = 0;
+      for(const b of breaks){ if(b > start + sliceMax * 0.4 && b <= end && b > best) best = b; }
+      if(best) end = Math.floor(best);
+    }
+    if(end <= start) end = Math.min(start + sliceMax, totalH);
+    pages.push([start, end]); start = end;
+  }
+  return pages;
+}
+async function savePartyRangePDF(fromYM, toYM){
+ try{
+  if(!fromYM || !toYM || fromYM > toYM){ toast('Select a valid month range'); return; }
+  const rangeEntries = filterByYMRange(DB.entries, fromYM, toYM);
+  if(!rangeEntries.length){ toast('No entries in this period'); return; }
+  toast('Creating PDF...');
+  const byPartyRange = {};
+  rangeEntries.forEach(e=>{
+    if(!byPartyRange[e.code]) byPartyRange[e.code] = {code:e.code, name:e.party, count:0, gross:0, net:0, bank:0, cr:0, weight:0};
+    const b = byPartyRange[e.code];
+    b.count++; b.gross+=e.gross||0; b.net+=e.net||0; b.bank+=e.bankPayment||0; b.cr+=e.cr||0; b.weight+=e.weight||0;
+  });
+  const rangeList = Object.values(byPartyRange).sort((a,b)=> b.net - a.net);
+  const rangeTotals = computeTotals(rangeEntries);
+  const rangeLabel = ymRangeLabel(fromYM, toYM);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'share-card plain';
+  wrap.style.minHeight = '0';
+  wrap.innerHTML = `
+    <div class="sc-head">
+      <h3>Party-wise Sales Ranking — ${rangeLabel}</h3>
+      <div class="meta"><span>Total Parties: <b>${rangeList.length}</b></span><span>Total Entries: <b>${rangeTotals.count}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+    </div>
+    <div class="sc-summary">
+      <div class="item"><div class="lbl">Total Gross Sales</div><div class="val">${fmtMoney(rangeTotals.gross)}</div></div>
+      <div class="item good"><div class="lbl">Total Net</div><div class="val">${fmtMoney(rangeTotals.net)}</div></div>
+      <div class="item amber"><div class="lbl">Total Bank Payment</div><div class="val">${fmtMoney(rangeTotals.bank)}</div></div>
+      <div class="item"><div class="lbl">Total Weight</div><div class="val">${fmt(rangeTotals.weight)} tons</div></div>
+    </div>
+    <div class="statement">
+      ${renderPartyRangeShareTable(rangeList, rangeTotals)}
+    </div>
+    <div class="sc-foot">Authorized by: Md. Mehedi Hasan &middot; Mob: 01730-273061</div>
+  `;
+  await saveHTMLAsPDF(wrap, `party-ranking-${fromYM}-to-${toYM}.pdf`);
+ }catch(err){ console.error(err); toast('Could not create the PDF: ' + (err && err.message ? err.message : err)); }
+}
+
+
+function renderMonthAllPartiesTable(entries, totals){
+  const rows = entries.map(e=>`
+    <tr>
+      <td class="dt">${e.date}</td>
+      <td>${e.party||'—'}<div class="code-badge">#${e.code}</div></td>
+      <td>${e.do||'—'}</td>
+      <td>${e.commission||'—'}</td>
+      <td>${fmt(e.gross)}</td>
+      <td>${fmt(e.less1)}</td>
+      <td>${fmt(e.net)}</td>
+      <td>${fmt(e.bankPayment)}</td>
+      <td>${e.bankName||'—'}</td>
+      <td class="cr">${e.cr? fmt(e.cr) : '—'}</td>
+      <td>${e.weight? fmt(e.weight): '—'}</td>
+    </tr>`).join('');
+  return `<div class="stmt-table-wrap"><table class="stmt stmt-allparties">
+    <thead><tr><th>Date</th><th>Party</th><th>DO No.</th><th>Commission</th><th>Gross</th><th>1% Less</th><th>Net</th><th>Bank Payment</th><th>Bank</th><th>CR</th><th>Weight</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="4">Grand Total</td><td>${fmt(totals.gross)}</td><td>${fmt(totals.less1)}</td><td>${fmt(totals.net)}</td><td>${fmt(totals.bank)}</td><td>—</td><td>${fmt(totals.cr)}</td><td>${fmt(totals.weight)}</td></tr></tfoot>
+  </table></div>`;
+}
+
+async function shareMonthAllPartiesWhatsApp(ym){
+  const entries = DB.entries.filter(e=> ymOf(e.date)===ym).sort((a,b)=> a.date.localeCompare(b.date) || String(a.party||'').localeCompare(String(b.party||'')));
+  if(!entries.length){ toast('No entries this month'); return; }
+  if(typeof html2canvas !== 'function'){ toast('Image library did not load, check your internet connection'); return; }
+
+  toast('Creating monthly report image...');
+  const totals = computeTotals(entries);
+  const mLabel = ymLabel(ym);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'share-card plain';
+  wrap.innerHTML = `
+    <div class="sc-head">
+      <h3>Monthly Entries — ${mLabel} (All Parties)</h3>
+      <div class="meta"><span>Total Entries: <b>${totals.count}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+    </div>
+    <div class="sc-summary">
+      <div class="item"><div class="lbl">Total Gross Sales</div><div class="val">${fmtMoney(totals.gross)}</div></div>
+      <div class="item good"><div class="lbl">Total Net</div><div class="val">${fmtMoney(totals.net)}</div></div>
+      <div class="item amber"><div class="lbl">Total Bank Payment</div><div class="val">${fmtMoney(totals.bank)}</div></div>
+      <div class="item amber"><div class="lbl">Total CR</div><div class="val">${fmtMoney(totals.cr)}</div></div>
+      <div class="item"><div class="lbl">Total Weight</div><div class="val">${fmt(totals.weight)} tons</div></div>
+    </div>
+    <div class="statement">
+      ${renderMonthAllPartiesTable(entries, totals)}
+    </div>
+    <div class="sc-foot">Authorized by: Md. Mehedi Hasan · Mob: 01730-273061</div>
+  `;
+  const holder = document.createElement('div');
+  holder.style.position = 'fixed';
+  holder.style.left = '-99999px';
+  holder.style.top = '0';
+  holder.appendChild(wrap);
+  document.body.appendChild(holder);
+
+  try{
+    await docFontsReady();
+    const canvas = await html2canvas(wrap, {scale:docScale(wrap), backgroundColor:'#ffffff', useCORS:true});
+    document.body.removeChild(holder);
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ toast('Image creation failed'); return; }
+      const fileName = `monthly-all-parties-${ym}-${Date.now()}.png`;
+      const file = new File([blob], fileName, {type:'image/png'});
+      const shareText = `Monthly Entries — ${mLabel} (All Parties)`;
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({files:[file], title:shareText, text:shareText});
+        }catch(err){ /* user cancelled the share sheet, nothing to do */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=> URL.revokeObjectURL(url), 8000);
+        toast('Image downloaded — go to the WhatsApp chat, attach the image and send it');
+        openWhatsApp(shareText);
+      }
+    }, 'image/png');
+  }catch(err){
+    if(holder.parentNode) document.body.removeChild(holder);
+    toast('Could not create the image, please try again');
+  }
+}
+
+/* ---------- WhatsApp sharing ---------- */
+function openWhatsApp(text){
+  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+/* Build the offscreen share-card HTML: header + monthly chart + full statement table,
+   styled exactly like the on-screen statement so the shared WhatsApp image matches it.
+   fromYM/toYM are optional "YYYY-MM" bounds — either or both may be empty (= open-ended). */
+function buildStatementShareCard(code, fromYM, toYM){
+  const party = DB.parties.find(p=>p.code===code);
+  const allEntries = DB.entries.filter(e=>e.code===code).sort((a,b)=> a.date.localeCompare(b.date) || String(a.do).localeCompare(String(b.do)));
+  const name = party ? party.name : '';
+
+  const monthly = {};
+  allEntries.forEach(e=>{
+    const ym = ymOf(e.date);
+    if(!monthly[ym]) monthly[ym] = 0;
+    monthly[ym] += e.net||0;
+  });
+  const monthKeys = allYearMonths(allEntries);
+  const maxMonthly = Math.max(1, ...monthKeys.map(ym=>monthly[ym]));
+
+  const hasRange = !!(fromYM || toYM);
+  const entries = hasRange ? filterByYMRange(allEntries, fromYM, toYM) : allEntries;
+  const totals = computeTotals(entries);
+  const periodLabel = ymRangeLabel(fromYM, toYM);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'share-card';
+
+  if(hasRange){
+    /* Specific month selected: simple clean statement, no KPI cards / no chart —
+       matches the plain printable statement look. */
+    wrap.classList.add('plain');
+    wrap.innerHTML = `
+      <div class="sc-head">
+        <h3>Distributor Statement — ${name}</h3>
+        <div class="meta"><span>Party Code: <b>#${code}</b></span><span>Period: <b>${periodLabel}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+      </div>
+      <div class="sc-summary">
+        <div class="item"><div class="lbl">Total Gross Sales</div><div class="val">${fmtMoney(totals.gross)}</div></div>
+        <div class="item good"><div class="lbl">Total Net</div><div class="val">${fmtMoney(totals.net)}</div></div>
+        <div class="item amber"><div class="lbl">Total Bank Payment</div><div class="val">${fmtMoney(totals.bank)}</div></div>
+        <div class="item amber"><div class="lbl">Total CR</div><div class="val">${fmtMoney(totals.cr)}</div></div>
+        <div class="item"><div class="lbl">Total Weight</div><div class="val">${fmt(totals.weight)} tons</div></div>
+      </div>
+      <div class="statement">
+        ${entries.length? renderStatementTable(entries, totals) : `<div class="empty-state"><div class="big">🧾</div><p>No entries were found for this party in this period.</p></div>`}
+      </div>
+      <div class="sc-foot">Authorized by: Md. Mehedi Hasan · Mob: 01730-273061</div>
+    `;
+    return wrap;
+  }
+
+  /* All-time (no range picked): full dashboard-style card with KPI grid + monthly chart */
+  wrap.innerHTML = `
+    <div class="sc-head">
+      <h3>Distributor Statement — ${name}</h3>
+      <div class="meta"><span>Party Code: <b>#${code}</b></span><span>Period: <b>${periodLabel}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi navy"><div class="label">Total Entries</div><div class="value">${totals.count}<small>  entries</small></div></div>
+      <div class="kpi"><div class="label">Total Gross</div><div class="value">${fmtMoney(totals.gross)}</div></div>
+      <div class="kpi good"><div class="label">Total Net</div><div class="value">${fmtMoney(totals.net)}</div></div>
+      <div class="kpi amber"><div class="label">Total Bank Payment</div><div class="value">${fmtMoney(totals.bank)}</div></div>
+      <div class="kpi amber"><div class="label">Total CR (balance adjustment)</div><div class="value">${fmtMoney(totals.cr)}</div></div>
+      <div class="kpi"><div class="label">Total Weight</div><div class="value">${fmt(totals.weight)}<small> tons</small></div></div>
+    </div>
+    <div class="card">
+      <h2><span class="dot"></span>Monthly Net Amount</h2>
+      ${monthKeys.length? `<div class="chart-wrap">${monthKeys.map(ym=>{
+          const h = Math.max(6, Math.round((monthly[ym]/maxMonthly)*130));
+          return `<div class="chart-bar-col"><div class="amt">${fmt(monthly[ym]/1000)}k</div><div class="chart-bar" style="height:${h}px"></div><div class="m">${ymLabel(ym)}</div></div>`;
+        }).join('')}</div>` : `<div class="chart-empty">No data yet</div>`}
+    </div>
+    <div class="statement">
+      <div class="statement-head">
+        <h3>Distributor Statement — ${name}</h3>
+        <div class="meta"><span>Party Code: <b>#${code}</b></span><span>Period: <b>${periodLabel}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+      </div>
+      ${entries.length? renderStatementTable(entries, totals) : `<div class="empty-state"><div class="big">🧾</div><p>No entries were found for this party.</p></div>`}
+    </div>
+    <div class="sc-foot">Authorized by: Md. Mehedi Hasan · Mob: 01730-273061</div>
+  `;
+  return wrap;
+}
+
+// One shared, reliable PDF builder for every "Print / PDF" button in DDB. Breaks pages only
+// at the bottom of a table row or a card/summary block, so nothing is ever cut through the
+// middle of a line — this replaces window.print(), whose paper size/orientation some phones
+// don't honour (showing "Letter" instead of A4 and splitting one page into several).
+async function saveHTMLAsPDF(wrap, filename, orientation){
+  orientation = orientation === 'landscape' ? 'landscape' : 'portrait';
+  if(typeof html2canvas !== 'function' || !window.jspdf){ toast('PDF library did not load, check your internet connection'); return; }
+  const holder = document.createElement('div');
+  holder.style.position = 'fixed';
+  holder.style.left = '-99999px';
+  holder.style.top = '0';
+  holder.appendChild(wrap);
+  document.body.appendChild(holder);
+  try{
+    await docFontsReady();
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const areaW = wrap.offsetWidth;
+    const areaTop = wrap.getBoundingClientRect().top;
+    const cssBreaks = Array.from(wrap.querySelectorAll('tr, .kpi-grid, .card, .sc-summary, .sc-foot, .statement-head'))
+      .map(el => el.getBoundingClientRect().bottom - areaTop);
+    const canvas = await html2canvas(wrap, {scale: docScale(wrap), backgroundColor:'#ffffff', useCORS:true});
+    document.body.removeChild(holder);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF(orientation === 'landscape' ? 'l' : 'p', 'mm', 'a4');
+    const pageW = orientation === 'landscape' ? 297 : 210;
+    const pageH = orientation === 'landscape' ? 210 : 297;
+    const marginY = 10;
+    const pxPerMm = canvas.width / pageW;      // canvas px per mm of PAPER (this was wrongly using areaW — the CSS width — before, which made every page far too short and split one page's worth of content into several)
+    const sliceMax = Math.floor((pageH - 2 * marginY) * pxPerMm);
+    const k = canvas.width / areaW;             // css px -> canvas px, for matching up the row-break positions
+    const pages = planPdfPages(canvas.height, sliceMax, cssBreaks.map(b => b * k));
+    pages.forEach(([y0, y1], i)=>{
+      const h = y1 - y0;
+      const part = document.createElement('canvas');
+      part.width = canvas.width; part.height = h;
+      const ctx = part.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, part.height);
+      ctx.drawImage(canvas, 0, y0, canvas.width, h, 0, 0, canvas.width, h);
+      if(i > 0) pdf.addPage();
+      pdf.addImage(part.toDataURL('image/png'), 'PNG', 0, marginY, pageW, h / pxPerMm);
+    });
+    pdf.save(filename);
+    toast('PDF downloaded');
+  }catch(err){
+    if(holder.parentNode) document.body.removeChild(holder);
+    console.error(err);
+    toast('Could not create the PDF: ' + (err && err.message ? err.message : err));
+  }
+}
+
+async function saveStatementPDF(code){
+ try{
+  const isSelected = selectedPartyCode===code;
+  const fromYM = isSelected ? statementFromYM : '';
+  const toYM = isSelected ? statementToYM : '';
+  const hasRange = !!(fromYM || toYM);
+  const entries = hasRange
+    ? filterByYMRange(DB.entries.filter(e=>e.code===code), fromYM, toYM)
+    : DB.entries.filter(e=>e.code===code);
+  if(!entries.length){ toast(hasRange? 'No entries for this party in this period' : 'No entries for this party'); return; }
+  toast('Creating PDF...');
+  const card = buildStatementShareCard(code, fromYM, toYM);
+  const rangeTag = hasRange ? `-${fromYM||'start'}_${toYM||'end'}` : '';
+  await saveHTMLAsPDF(card, `statement-${code}${rangeTag}.pdf`, 'landscape');
+ }catch(err){ console.error(err); toast('Could not create the PDF: ' + (err && err.message ? err.message : err)); }
+}
+
+async function saveMonthAllPartiesPDF(ym){
+ try{
+  const entries = DB.entries.filter(e=> ymOf(e.date)===ym).sort((a,b)=> a.date.localeCompare(b.date) || String(a.party||'').localeCompare(String(b.party||'')));
+  if(!entries.length){ toast('No entries this month'); return; }
+  toast('Creating PDF...');
+  const totals = computeTotals(entries);
+  const mLabel = ymLabel(ym);
+  const wrap = document.createElement('div');
+  wrap.className = 'share-card plain';
+  wrap.innerHTML = `
+    <div class="sc-head">
+      <h3>Monthly Entries — ${mLabel} (All Parties)</h3>
+      <div class="meta"><span>Total Entries: <b>${totals.count}</b></span><span>Created on: <b>${todayBn()}</b></span></div>
+    </div>
+    <div class="sc-summary">
+      <div class="item"><div class="lbl">Total Gross Sales</div><div class="val">${fmtMoney(totals.gross)}</div></div>
+      <div class="item good"><div class="lbl">Total Net</div><div class="val">${fmtMoney(totals.net)}</div></div>
+      <div class="item amber"><div class="lbl">Total Bank Payment</div><div class="val">${fmtMoney(totals.bank)}</div></div>
+      <div class="item amber"><div class="lbl">Total CR</div><div class="val">${fmtMoney(totals.cr)}</div></div>
+      <div class="item"><div class="lbl">Total Weight</div><div class="val">${fmt(totals.weight)} tons</div></div>
+    </div>
+    <div class="statement">
+      ${renderMonthAllPartiesTable(entries, totals)}
+    </div>
+    <div class="sc-foot">Authorized by: Md. Mehedi Hasan &middot; Mob: 01730-273061</div>
+  `;
+  await saveHTMLAsPDF(wrap, `monthly-all-parties-${ym}.pdf`, 'landscape');
+ }catch(err){ console.error(err); toast('Could not create the PDF: ' + (err && err.message ? err.message : err)); }
+}
+
+async function shareStatementWhatsApp(code){
+  const party = DB.parties.find(p=>p.code===code);
+  const isSelected = selectedPartyCode===code;
+  const fromYM = isSelected ? statementFromYM : '';
+  const toYM = isSelected ? statementToYM : '';
+  const hasRange = !!(fromYM || toYM);
+  const entries = hasRange
+    ? filterByYMRange(DB.entries.filter(e=>e.code===code), fromYM, toYM)
+    : DB.entries.filter(e=>e.code===code);
+  if(!entries.length){ toast(hasRange? 'No entries for this party in this period' : 'No entries for this party'); return; }
+  if(typeof html2canvas !== 'function'){ toast('Image library did not load, check your internet connection'); return; }
+
+  toast('Creating statement image...');
+
+  const card = buildStatementShareCard(code, fromYM, toYM);
+  const holder = document.createElement('div');
+  holder.style.position = 'fixed';
+  holder.style.left = '-99999px';
+  holder.style.top = '0';
+  holder.appendChild(card);
+  document.body.appendChild(holder);
+
+  try{
+    await docFontsReady();
+    const canvas = await html2canvas(card, {scale:docScale(card), backgroundColor:'#ffffff', useCORS:true});
+    document.body.removeChild(holder);
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ toast('Image creation failed'); return; }
+      const rangeTag = hasRange ? `-${fromYM||'start'}_${toYM||'end'}` : '';
+      const fileName = `statement-${code}${rangeTag}-${Date.now()}.png`;
+      const file = new File([blob], fileName, {type:'image/png'});
+      const periodTxt = hasRange ? ` (${ymRangeLabel(fromYM,toYM)})` : '';
+      const shareText = `Distributor Statement — ${party? party.name:''}${periodTxt}`;
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({files:[file], title:shareText, text:shareText});
+        }catch(err){ /* user cancelled the share sheet, nothing to do */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=> URL.revokeObjectURL(url), 8000);
+        toast('Image downloaded — go to the WhatsApp chat, attach the image and send it');
+        openWhatsApp(shareText);
+      }
+    }, 'image/png');
+  }catch(err){
+    if(holder.parentNode) document.body.removeChild(holder);
+    toast('Could not create the image, please try again');
+  }
+}
+
+function shareEntryWhatsApp(id){
+  const e = DB.entries.find(x=>x.id===id);
+  if(!e) return;
+  let lines = [];
+  lines.push(`*Entries — ${e.party}* (#${e.code})`);
+  lines.push(`Date: ${e.date}   DO No.: ${e.do||'—'}`);
+  lines.push('');
+  lines.push(`Gross Amount: ৳${fmt(e.gross)}`);
+  lines.push(`1% Less: ৳${fmt(e.less1)}`);
+  lines.push(`Net Amount: ৳${fmt(e.net)}`);
+  lines.push(`Bank Payment: ৳${fmt(e.bankPayment)}${e.bankName? ' ('+e.bankName+')':''}`);
+  if(e.cr) lines.push(`CR (Balance adjustment): ৳${fmt(e.cr)}`);
+  if(e.weight) lines.push(`Weight: ${fmt(e.weight)} tons`);
+  if(e.note) lines.push(`Note: ${e.note}`);
+  lines.push('');
+  lines.push('_Glass — Party_');
+  openWhatsApp(lines.join('\n'));
+}
+
+function todayBn(){
+  const d = new Date();
+  return d.toLocaleDateString('en-GB').split('/').join('/');
+}
+
+function goAddEntryFor(code){
+  switchView('entry');
+  const p = DB.parties.find(p=>p.code===code);
+  if(p){
+    document.getElementById('f_party').value = `${p.name} (#${p.code})`;
+    document.getElementById('f_party').dataset.code = p.code;
+  }
+}
+
+/* ---------- Data Entry: party combobox ---------- */
+const f_party = document.getElementById('f_party');
+const f_partyList = document.getElementById('f_partyList');
+function renderEntryPartyOptions(query){
+  const q = (query||'').trim().toLowerCase();
+  let list = DB.parties.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(q){
+    const qStripped = q.replace(/^0+(?=\d)/, '');
+    list = list.filter(p=>{
+      if(p.name.toLowerCase().includes(q)) return true;
+      const codeStr = String(p.code);
+      return codeStr.includes(q) || codeStr.includes(qStripped) || codeStr.padStart(4,'0').includes(q);
+    });
+  }
+  let html = list.map(p=>`<div class="picker-item" data-code="${p.code}" data-name="${p.name}"><span>${p.name}</span><span class="code">#${p.code}</span></div>`).join('');
+  const showAdd = q && !list.some(p=>p.name.toLowerCase()===q);
+  document.getElementById('f_partyAddWrap').style.display = 'none';
+  f_partyList.innerHTML = html || '<div class="picker-empty">No match — add a new party from below</div>';
+  f_partyList.classList.add('show');
+  if(showAdd){
+    document.getElementById('f_partyAddWrap').style.display = 'flex';
+    document.getElementById('f_partyNewName').value = query;
+  }
+}
+f_party.addEventListener('focus', ()=> renderEntryPartyOptions(f_party.value.split(' (#')[0]));
+f_party.addEventListener('input', ()=>{ delete f_party.dataset.code; renderEntryPartyOptions(f_party.value); });
+f_partyList.addEventListener('click', (e)=>{
+  const item = e.target.closest('.picker-item');
+  if(!item) return;
+  f_party.value = `${item.dataset.name} (#${item.dataset.code})`;
+  f_party.dataset.code = item.dataset.code;
+  f_partyList.classList.remove('show');
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#f_party') && !e.target.closest('#f_partyList')) f_partyList.classList.remove('show');
+});
+document.getElementById('f_partyAddBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('f_partyNewName').value.trim();
+  const code = Number(document.getElementById('f_partyNewCode').value.trim());
+  if(!name || !code){ toast('Enter name and code'); return; }
+  if(DB.parties.some(p=>p.code===code)){ toast('This code already exists'); return; }
+  DB.parties.push({code, name});
+  saveDB();
+  f_party.value = `${name} (#${code})`;
+  f_party.dataset.code = code;
+  document.getElementById('f_partyAddWrap').style.display = 'none';
+  f_partyList.classList.remove('show');
+  toast('New party added');
+});
+
+/* ---------- Data Entry: bank select ---------- */
+function renderBankOptions(){
+  const sel = document.getElementById('f_bankName');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select —</option>' +
+    DB.banks.slice().sort().map(b=>`<option value="${b}">${b}</option>`).join('') +
+    '<option value="__new__">+ Add new bank</option>';
+  sel.value = current || '';
+}
+document.getElementById('f_bankName').addEventListener('change', (e)=>{
+  document.getElementById('f_bankAddWrap').style.display = e.target.value==='__new__' ? 'flex':'none';
+});
+document.getElementById('f_bankAddBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('f_bankNewName').value.trim();
+  if(!name){ toast('Enter the bank name'); return; }
+  if(!DB.banks.includes(name)) DB.banks.push(name);
+  saveDB();
+  renderBankOptions();
+  document.getElementById('f_bankName').value = name;
+  document.getElementById('f_bankAddWrap').style.display = 'none';
+  toast('Bank added');
+});
+
+/* ---------- Auto-calc in entry form ---------- */
+const f_gross = document.getElementById('f_gross');
+const f_less1 = document.getElementById('f_less1');
+const f_bankPayment = document.getElementById('f_bankPayment');
+const f_cr = document.getElementById('f_cr');
+const f_net = document.getElementById('f_net');
+let less1Touched = false;
+f_gross.addEventListener('input', ()=>{
+  if(!less1Touched){ f_less1.value = f_gross.value ? (Number(f_gross.value)*0.99).toFixed(2) : ''; }
+});
+f_less1.addEventListener('input', ()=> less1Touched = true);
+document.getElementById('f_less1AutoBtn').addEventListener('click', ()=>{
+  less1Touched = false;
+  f_less1.value = f_gross.value ? (Number(f_gross.value)*0.99).toFixed(2) : '';
+  toast('Auto calculation is on ✓');
+});
+/* Net is now fully manual — it will no longer be filled automatically from bank payment/CR, you must enter it yourself */
+
+/* ---------- Entry form submit / reset ---------- */
+document.getElementById('entryForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const code = Number(f_party.dataset.code || '');
+  const party = DB.parties.find(p=>p.code===code);
+  if(!code || !party){ toast('Select the correct party from the list'); return; }
+  const date = document.getElementById('f_date').value;
+  if(!date){ toast('Enter a date'); return; }
+  const gross = Number(f_gross.value);
+  if(!gross){ toast('Enter the gross amount'); return; }
+
+  const rec = {
+    id: editingEntryId || uid(),
+    date, party: party.name, code,
+    do: document.getElementById('f_do').value.trim(),
+    gross,
+    less1: Number(f_less1.value)||Math.round(gross*0.99*100)/100,
+    net: Number(f_net.value)||0,
+    bankPayment: Number(f_bankPayment.value)||0,
+    bankName: document.getElementById('f_bankName').value==='__new__' ? '' : document.getElementById('f_bankName').value,
+    cr: Number(f_cr.value)||0,
+    weight: Number(document.getElementById('f_weight').value)||0,
+    commission: document.getElementById('f_commission').value.trim(),
+    note: document.getElementById('f_note').value.trim()
+  };
+
+  if(editingEntryId){
+    const idx = DB.entries.findIndex(x=>x.id===editingEntryId);
+    if(idx>-1) DB.entries[idx] = rec;
+    toast('Entry updated');
+  } else {
+    DB.entries.push(rec);
+    toast('New entry added');
+  }
+  saveDB();
+  resetEntryForm();
+  renderEntriesTable();
+});
+document.getElementById('entryResetBtn').addEventListener('click', resetEntryForm);
+function resetEntryForm(){
+  editingEntryId = null;
+  less1Touched = false;
+  document.getElementById('entryForm').reset();
+  delete f_party.dataset.code;
+  document.getElementById('f_partyAddWrap').style.display = 'none';
+  document.getElementById('f_bankAddWrap').style.display = 'none';
+  document.getElementById('entryFormTitle').textContent = 'New Entry';
+  document.getElementById('entrySaveBtn').textContent = '💾 Save Entry';
+  const d = new Date();
+  document.getElementById('f_date').value = d.toISOString().slice(0,10);
+}
+
+function editEntry(id){
+  const e = DB.entries.find(x=>x.id===id);
+  if(!e) return;
+  editingEntryId = id;
+  less1Touched = true;
+  document.getElementById('f_date').value = e.date;
+  document.getElementById('f_do').value = e.do||'';
+  f_party.value = `${e.party} (#${e.code})`;
+  f_party.dataset.code = e.code;
+  f_gross.value = e.gross||'';
+  f_less1.value = e.less1||'';
+  f_bankPayment.value = e.bankPayment||'';
+  f_cr.value = e.cr||'';
+  renderBankOptions();
+  document.getElementById('f_bankName').value = e.bankName||'';
+  f_net.value = e.net||'';
+  document.getElementById('f_weight').value = e.weight||'';
+  document.getElementById('f_commission').value = e.commission||'';
+  document.getElementById('f_note').value = e.note||'';
+  document.getElementById('entryFormTitle').textContent = 'Edit Entry';
+  document.getElementById('entrySaveBtn').textContent = '💾 Save Update';
+  switchView('entry');
+  document.getElementById('entryForm').scrollIntoView({behavior:'smooth'});
+}
+function deleteEntry(id){
+  if(!confirm('Do you want to delete this entry?')) return;
+  DB.entries = DB.entries.filter(x=>x.id!==id);
+  saveDB();
+  renderEntriesTable();
+  toast('Entry deleted');
+}
+
+/* ---------- Entries table ---------- */
+const entrySearch = document.getElementById('entrySearch');
+entrySearch.addEventListener('input', renderEntriesTable);
+function renderEntriesTable(){
+  const q = entrySearch.value.trim().toLowerCase();
+  let list = DB.entries.slice().sort((a,b)=> b.date.localeCompare(a.date));
+  if(q){
+    list = list.filter(e => e.party.toLowerCase().includes(q) || String(e.code).includes(q) || e.date.includes(q) || String(e.do).toLowerCase().includes(q));
+  }
+  const tbody = document.getElementById('entriesTbody');
+  if(list.length===0){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:20px">No entries found</td></tr>`;
+  } else {
+    tbody.innerHTML = list.map(e=>`
+      <tr>
+        <td class="dt">${e.date}</td>
+        <td>${e.party}<div class="code-badge" style="font-size:10.5px;color:var(--ink-soft)">#${e.code}</div></td>
+        <td>${e.do||'—'}</td>
+        <td>${e.commission||'—'}</td>
+        <td>${fmt(e.gross)}</td>
+        <td>${fmt(e.net)}</td>
+        <td>${e.bankName||'—'}</td>
+        <td>${e.cr? fmt(e.cr):'—'}</td>
+        <td><div class="row-actions">
+          <button class="icon-btn" style="background:#DFF7E7;color:#0F7A3C" onclick="shareEntryWhatsApp('${e.id}')" title="Share on WhatsApp">🟢</button>
+          <button class="icon-btn" onclick="editEntry('${e.id}')" title="Edit">✏️</button>
+          <button class="icon-btn danger" onclick="deleteEntry('${e.id}')" title="Delete">🗑️</button>
+        </div></td>
+      </tr>`).join('');
+  }
+  document.getElementById('entriesCount').textContent = `Showing ${list.length} entries (total ${DB.entries.length})`;
+}
+
+/* ---------- Settings ---------- */
+function renderSettings(){
+  const pWrap = document.getElementById('partyListWrap');
+  const parties = DB.parties.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  pWrap.innerHTML = parties.length ? parties.map(p=>{
+    const cnt = DB.entries.filter(e=>e.code===p.code).length;
+    return `<div class="list-row">
+      <div><div class="name">${p.name}</div><div class="meta2">Code #${p.code} · ${cnt} entries</div></div>
+      <div class="actions">
+        <button class="icon-btn" onclick="renamePartyPrompt(${p.code})" title="Edit">✏️</button>
+        <button class="icon-btn danger" onclick="deleteParty(${p.code})" title="Delete">🗑️</button>
+      </div>
+    </div>`;
+  }).join('') : `<p class="muted" style="font-size:13px">No parties</p>`;
+
+  const bWrap = document.getElementById('bankListWrap');
+  const banks = DB.banks.slice().sort();
+  bWrap.innerHTML = banks.length ? banks.map(b=>`
+    <div class="list-row">
+      <div class="name">${b}</div>
+      <div class="actions"><button class="icon-btn danger" onclick="deleteBank('${b.replace(/'/g,"\\'")}')" title="Delete">🗑️</button></div>
+    </div>`).join('') : `<p class="muted" style="font-size:13px">No banks</p>`;
+}
+function renamePartyPrompt(code){
+  const p = DB.parties.find(x=>x.code===code);
+  if(!p) return;
+  const name = prompt('New name for the party:', p.name);
+  if(name===null || !name.trim()) return;
+  const oldName = p.name;
+  p.name = name.trim();
+  DB.entries.forEach(e=>{ if(e.code===code) e.party = p.name; });
+  saveDB();
+  renderSettings();
+  toast('Party name updated');
+}
+function deleteParty(code){
+  const cnt = DB.entries.filter(e=>e.code===code).length;
+  const msg = cnt>0 ? `This party has ${cnt} entries. Deleting the party removes it from the list (the entries will stay). Continue?` : 'Do you want to delete this party?';
+  if(!confirm(msg)) return;
+  DB.parties = DB.parties.filter(p=>p.code!==code);
+  saveDB();
+  renderSettings();
+  toast('Party deleted');
+}
+function deleteBank(name){
+  if(!confirm('Do you want to remove this bank from the list?')) return;
+  DB.banks = DB.banks.filter(b=>b!==name);
+  saveDB();
+  renderSettings();
+  toast('Bank deleted');
+}
+document.getElementById('s_partyAddBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('s_partyName').value.trim();
+  const code = Number(document.getElementById('s_partyCode').value.trim());
+  if(!name || !code){ toast('Enter name and code'); return; }
+  if(DB.parties.some(p=>p.code===code)){ toast('This code already exists'); return; }
+  DB.parties.push({code, name});
+  saveDB();
+  document.getElementById('s_partyName').value='';
+  document.getElementById('s_partyCode').value='';
+  renderSettings();
+  toast('Party added');
+});
+document.getElementById('s_bankAddBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('s_bankName').value.trim();
+  if(!name){ toast('Enter the bank name'); return; }
+  if(!DB.banks.includes(name)) DB.banks.push(name);
+  saveDB();
+  document.getElementById('s_bankName').value='';
+  renderSettings();
+  toast('Bank added');
+});
+
+/* ---------- Data management ---------- */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ddb-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup downloaded');
+});
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data.entries || !data.parties) throw new Error('invalid');
+      if(!confirm('All current data will be erased and restored from the backup. Are you sure?')) return;
+      DB = data;
+      DB.banks = DB.banks || [];
+      saveDB();
+      toast('Restored from backup');
+      renderSettings();
+      renderDashboard();
+    }catch(err){
+      toast('The file is not valid');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+  const headers = ['Date','Party','Code','DO','Gross','1% Less','Net','Bank Payment','Bank','CR','Weight','Note'];
+  const rows = DB.entries.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(e=>[e.date,e.party,e.code,e.do,e.gross,e.less1,e.net,e.bankPayment,e.bankName,e.cr,e.weight,e.note]);
+  const csv = [headers, ...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ddb-entries-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV downloaded');
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('All data will be erased and you will start fresh with sample data. This cannot be undone. Are you sure?')) return;
+  DB = JSON.parse(JSON.stringify(SEED));
+  saveDB();
+  selectedPartyCode = null;
+  toast('Data reset');
+  renderSettings();
+  renderDashboard();
+});
+
+/* ---------- Install (PWA) ---------- */
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('installBtn');
+const settingsInstallBtn = document.getElementById('settingsInstallBtn');
+const installHint = document.getElementById('installHint');
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if(!isStandalone()){
+    installBtn.style.display = 'flex';
+    installHint.textContent = 'Your browser is ready to install — tap the button below.';
+  }
+});
+
+async function triggerInstall(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.style.display = 'none';
+    if(choice && choice.outcome === 'accepted'){
+      toast('Installing app...');
+    }
+  } else if(isStandalone()){
+    toast('The app is already installed');
+  } else {
+    installHint.textContent = 'No automatic install prompt is available right now. From the browser menu (⋮ or the share icon) choose "Add to Home screen" / "Install app". If you uninstalled it earlier, refresh this page and try again.';
+  }
+}
+installBtn.addEventListener('click', triggerInstall);
+settingsInstallBtn.addEventListener('click', triggerInstall);
+
+window.addEventListener('appinstalled', ()=>{
+  installBtn.style.display = 'none';
+  toast('Party app installed successfully');
+});
+
+if(isStandalone() && installHint){
+  installHint.textContent = 'The app is already installed ✓';
+}
+
+/* ---------- Install diagnostics ---------- */
+async function checkUrl(url){
+  try{
+    const res = await fetch(url, {cache:'no-store'});
+    return {ok: res.ok, status: res.status};
+  }catch(err){
+    return {ok:false, status:'fetch-error'};
+  }
+}
+async function runInstallDiagnostics(){
+  const box = document.getElementById('diagResult');
+  box.style.display = 'block';
+  box.innerHTML = `<p class="hint muted">Checking...</p>`;
+
+  const rows = [];
+  rows.push(['HTTPS connection', location.protocol==='https:' || location.hostname==='localhost']);
+
+  const manifestCheck = await checkUrl('manifest.json');
+  rows.push(['manifest.json loading', manifestCheck.ok, manifestCheck.status]);
+
+  const icon192 = await checkUrl('icon-192.png');
+  rows.push(['icon-192.png found', icon192.ok, icon192.status]);
+
+  const icon512 = await checkUrl('icon-512.png');
+  rows.push(['icon-512.png found', icon512.ok, icon512.status]);
+
+  const iconM192 = await checkUrl('icon-maskable-192.png');
+  rows.push(['icon-maskable-192.png found', iconM192.ok, iconM192.status]);
+
+  const iconM512 = await checkUrl('icon-maskable-512.png');
+  rows.push(['icon-maskable-512.png found', iconM512.ok, iconM512.status]);
+
+  const avatarCheck = await checkUrl('avatar.png');
+  rows.push(['avatar.png found', avatarCheck.ok, avatarCheck.status]);
+
+  let swStatus = false, swDetail = '';
+  if('serviceWorker' in navigator){
+    try{
+      const reg = await navigator.serviceWorker.getRegistration();
+      if(reg && reg.active){ swStatus = true; swDetail = 'active'; }
+      else if(reg && reg.installing){ swDetail = 'installing (may be stuck)'; }
+      else if(reg && reg.waiting){ swDetail = 'waiting'; }
+      else { swDetail = 'not registered'; }
+    }catch(err){ swDetail = String(err.message||err); }
+  } else {
+    swDetail = 'This browser does not support service workers';
+  }
+  rows.push(['Service worker active', swStatus, window.__swRegError ? ('Error: '+window.__swRegError) : swDetail]);
+
+  rows.push(['Install prompt ready', !!deferredInstallPrompt, isStandalone()? 'Already installed' : (deferredInstallPrompt? 'Yes' : 'No — see the reasons below')]);
+
+  const allGood = rows.every(r=>r[1]===true);
+  let html = `<div style="background:#0F2540; border-radius:10px; padding:10px 12px; font-size:12.5px">`;
+  rows.forEach(([label, ok, detail])=>{
+    html += `<div style="display:flex; align-items:center; gap:8px; padding:4px 0">
+      <span style="color:${ok?'#2FDB77':'#E9524A'}">${ok?'✔':'✖'}</span>
+      <span style="flex:1">${label}</span>
+      ${detail && detail!==true ? `<span style="color:#9BB0C8; font-size:11px">${detail}</span>`:''}
+    </div>`;
+  });
+  html += `</div>`;
+  if(!allGood){
+    html += `<p class="hint muted" style="margin-top:8px">✖ The marked items need fixing. Take a screenshot of this list and send it, and I will fix them specifically.</p>`;
+  } else {
+    html += `<p class="hint muted" style="margin-top:8px">Everything looks fine. Tap the "⬇ Install App" button, or use "Add to Home screen" from the browser menu (⋮).</p>`;
+  }
+  box.innerHTML = html;
+}
+document.getElementById('runDiagBtn').addEventListener('click', runInstallDiagnostics);
+
+
+/* ---------- Security lock (Fingerprint + PIN) ---------- */
+const LOCK_KEYS = { cred: 'ddb_webauthn_cred_id', pinHash: 'ddb_pin_hash', lockEnabled: 'ddb_lock_enabled' };
+const lockScreen = document.getElementById('lockScreen');
+const fpUnlockBtn = document.getElementById('fpUnlockBtn');
+const lockError = document.getElementById('lockError');
+const pinArea = document.getElementById('pinArea');
+const pinInputs = Array.from(document.querySelectorAll('#pinInputs input'));
+const pinToggleBtn = document.getElementById('pinToggleBtn');
+const setupFpBtn = document.getElementById('setupFpBtn');
+const setupPinBtn = document.getElementById('setupPinBtn');
+const disableLockBtn = document.getElementById('disableLockBtn');
+const lockStatus = document.getElementById('lockStatus');
+
+function b64uToBuf(str){
+  str = str.replace(/-/g,'+').replace(/_/g,'/');
+  while(str.length % 4) str += '=';
+  const bin = atob(str);
+  const buf = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
+  return buf;
+}
+function bufToB64u(buf){
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function sha256Hex(text){
+  const enc = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function hasWebAuthn(){
+  return !!(window.PublicKeyCredential && navigator.credentials);
+}
+function hasLockSetup(){
+  return !!localStorage.getItem(LOCK_KEYS.pinHash);
+}
+function isLockEnabled(){
+  return localStorage.getItem(LOCK_KEYS.lockEnabled) === '1' && hasLockSetup();
+}
+
+async function registerFingerprint(){
+  if(!hasWebAuthn()){
+    toast('Fingerprint (WebAuthn) is not supported on this browser/device');
+    return;
+  }
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost'){
+    toast('The app must be hosted on HTTPS to enable fingerprint');
+    return;
+  }
+  if(!hasLockSetup()){
+    toast('Set a PIN first, then enable the fingerprint');
+    return;
+  }
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: 'Party' },
+        user: { id: userId, name: 'party-user', displayName: 'Party User' },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+        timeout: 60000,
+        attestation: 'none'
+      }
+    });
+    if(!cred) throw new Error('no credential');
+    localStorage.setItem(LOCK_KEYS.cred, bufToB64u(cred.rawId));
+    localStorage.setItem(LOCK_KEYS.lockEnabled, '1');
+    toast('Fingerprint enabled ✓');
+    renderLockStatus();
+  }catch(err){
+    toast('Fingerprint setup was cancelled or failed');
+  }
+}
+
+async function verifyFingerprint(){
+  const credId = localStorage.getItem(LOCK_KEYS.cred);
+  if(!credId || !hasWebAuthn()) return false;
+  try{
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{ id: b64uToBuf(credId), type:'public-key' }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    return !!assertion;
+  }catch(err){
+    return false;
+  }
+}
+
+function setPin(pin){
+  sha256Hex(pin).then(hash=>{
+    localStorage.setItem(LOCK_KEYS.pinHash, hash);
+    localStorage.setItem(LOCK_KEYS.lockEnabled, '1');
+    toast('PIN set ✓');
+    renderLockStatus();
+  });
+}
+async function verifyPin(pin){
+  const stored = localStorage.getItem(LOCK_KEYS.pinHash);
+  if(!stored) return false;
+  const hash = await sha256Hex(pin);
+  return hash === stored;
+}
+
+function renderLockStatus(){
+  const hasFp = !!localStorage.getItem(LOCK_KEYS.cred);
+  const hasPin = hasLockSetup();
+  const enabled = isLockEnabled();
+  disableLockBtn.style.display = enabled ? 'flex' : 'none';
+  if(!hasPin){
+    lockStatus.textContent = 'Lock is not set up yet.';
+  } else {
+    lockStatus.textContent = `Lock is on ✓ ${hasFp? '(fingerprint + PIN)' : '(PIN only)'}`;
+  }
+}
+
+setupPinBtn.addEventListener('click', ()=>{
+  const p1 = prompt('Enter a new 4-digit PIN:');
+  if(p1===null) return;
+  if(!/^\d{4}$/.test(p1)){ toast('Enter a 4-digit PIN'); return; }
+  const p2 = prompt('Enter the PIN again:');
+  if(p2 !== p1){ toast('PINs do not match'); return; }
+  setPin(p1);
+});
+setupFpBtn.addEventListener('click', registerFingerprint);
+disableLockBtn.addEventListener('click', ()=>{
+  if(!confirm('Do you want to turn off the app lock?')) return;
+  localStorage.removeItem(LOCK_KEYS.cred);
+  localStorage.removeItem(LOCK_KEYS.pinHash);
+  localStorage.removeItem(LOCK_KEYS.lockEnabled);
+  toast('Lock turned off');
+  renderLockStatus();
+});
+
+/* Lock screen interactions */
+function unlockApp(){
+  lockScreen.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function showLockError(msg){
+  lockError.textContent = msg;
+  setTimeout(()=>{ lockError.textContent=''; }, 2500);
+}
+fpUnlockBtn.addEventListener('click', async ()=>{
+  const ok = await verifyFingerprint();
+  if(ok){ unlockApp(); } else { showLockError('Fingerprint did not match, try again or use the PIN'); }
+});
+pinToggleBtn.addEventListener('click', ()=>{
+  const showing = pinArea.style.display !== 'none';
+  pinArea.style.display = showing ? 'none' : 'block';
+  pinToggleBtn.textContent = showing ? 'Unlock with PIN' : 'Unlock with fingerprint';
+  if(!showing) pinInputs[0].focus();
+});
+pinInputs.forEach((inp, idx)=>{
+  inp.addEventListener('input', ()=>{
+    inp.value = inp.value.replace(/\D/g,'').slice(0,1);
+    if(inp.value && idx < pinInputs.length-1) pinInputs[idx+1].focus();
+    if(pinInputs.every(i=>i.value.length===1)){
+      const pin = pinInputs.map(i=>i.value).join('');
+      verifyPin(pin).then(ok=>{
+        if(ok){ unlockApp(); }
+        else{
+          showLockError('Incorrect PIN');
+          pinInputs.forEach(i=>i.value='');
+          pinInputs[0].focus();
+        }
+      });
+    }
+  });
+  inp.addEventListener('keydown', (e)=>{
+    if(e.key==='Backspace' && !inp.value && idx>0) pinInputs[idx-1].focus();
+  });
+});
+
+/* Show lock screen on load if enabled */
+if(isLockEnabled()){
+  lockScreen.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  if(!localStorage.getItem(LOCK_KEYS.cred) || !hasWebAuthn()){
+    fpUnlockBtn.style.display = 'none';
+    pinArea.style.display = 'block';
+    pinToggleBtn.style.display = 'none';
+  }
+} else {
+  lockScreen.classList.add('hidden');
+}
+renderLockStatus();
+
+/* ---------- init ---------- */
+resetEntryForm();
+renderEntryPartyOptions();
+renderBankOptions();
+renderDashboard();
+
+// Cloud backup is ON by default (this is what stops another SIM swap, app reinstall, or a
+// lost/broken phone from wiping the data again): the very first time this app runs anywhere
+// without a sync code yet, it quietly turns sync on using one fixed code — so every device
+// that has ever opened this app keeps the exact same data automatically, with no code to
+// remember or type. Anyone who had already set their own code (from before) keeps using it.
+const DEFAULT_SYNC_CODE = 'NASIRGLASS-DDB-MAIN-9241';
+function getPartyParam(){
+  try{ const p = new URLSearchParams(location.search).get('shop'); return p ? p.trim() : ''; }
+  catch(e){ return ''; }
+}
+const partyParam = getPartyParam();
+// The logged-in shop's Firebase uid (from the hub) is used directly as the sync document id,
+// so it matches what Glass writes into and what the security rules check.
+const partySyncCode = partyParam;
+// If opened from the hub with a logged-in party name, that name's data is always
+// kept separate automatically — no manual code needed. Otherwise fall back to
+// whatever code was set before, or the single shared default.
+const existingSyncCode = partySyncCode || getSyncCode() || DEFAULT_SYNC_CODE;
+document.getElementById('syncCodeInput').value = existingSyncCode;
+document.getElementById('syncStopBtn').style.display = 'block';
+startSync(existingSyncCode);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch((err)=>{
+      console.error('Service worker registration failed:', err);
+      window.__swRegError = String(err && err.message || err);
+    });
+  });
+}
+</script>
+</body>
+</html>
