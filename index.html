@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Glass</title>
+<meta name="theme-color" content="#0f1720">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Tiro+Bangla&family=Tinos:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --bg:#0A1018; --panel:#111A26; --panel2:#0D1620;
+    --text:#E8EDF3; --muted:#7E8FA3; --line:#1E2B3A;
+    --gold:#C7A458; --gold-dim:rgba(199,164,88,.14);
+    --c-nasirglass:#3E6DA8; --c-ddb:#5C7A5E;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+
+  /* BOOT / LOGIN */
+  #boot-check{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;color:var(--muted);font-size:14px;}
+  #login-screen{position:fixed;inset:0;background:var(--bg);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;}
+  #login-screen.hidden, #boot-check.hidden{display:none !important;}
+  .login-box{width:100%;max-width:360px;}
+  .login-logo{text-align:center;margin-bottom:34px;}
+  .login-logo img{width:64px;height:64px;border-radius:16px;margin-bottom:14px;border:1px solid var(--line);}
+  .login-logo .t1{font-size:20px;font-weight:700;letter-spacing:.3px;}
+  .login-logo .t2{font-size:13px;color:var(--muted);margin-top:6px;}
+  .login-box input{
+    width:100%;padding:13px 14px;margin-bottom:10px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:15px;
+  }
+  .login-box input:focus{outline:none;border-color:var(--gold);}
+  .login-box .err{color:#d97a6c;font-size:13px;min-height:18px;margin-bottom:6px;}
+  .login-box button.primary{
+    width:100%;padding:13px;border:none;border-radius:10px;
+    background:var(--gold);color:#1a1408;font-size:15px;font-weight:700;
+  }
+  .login-box .switch{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);}
+  .login-box .switch a{color:var(--gold);text-decoration:none;}
+
+  /* HOME SCREEN */
+  #home{flex:1;overflow-y:auto;padding:0 18px 100px;}
+  #home .headband{
+    margin:0 -18px 22px; padding:max(22px,env(safe-area-inset-top)) 20px 18px;
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  #home .brandrow{display:flex; align-items:center; gap:12px;}
+  #home .brandrow img{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);}
+  #home h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.3px;}
+  #home p.sub{margin:2px 0 0;color:var(--muted);font-size:12.5px;}
+  #logout-link{background:none;border:none;color:var(--muted);font-size:12px;padding:6px 4px;}
+  .cards{display:flex;flex-direction:column;gap:10px;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line); border-left:3px solid var(--accent, var(--gold)); border-radius:10px; padding:16px;
+    display:flex; align-items:center; gap:14px; cursor:pointer;
+    transition:background .12s ease;
+  }
+  .card:active{background:var(--panel2);}
+  .card .icon{
+    width:46px;height:46px;border-radius:10px;flex:0 0 46px;
+    overflow:hidden; border:1px solid var(--line);
+  }
+  .card .icon img{display:block;width:100%;height:100%;object-fit:cover;}
+  .card .meta{flex:1;min-width:0;}
+  .card .meta .name{font-weight:700;font-size:15.5px;margin-bottom:3px;}
+  .card .meta .desc{font-size:12.5px;color:var(--muted);}
+  .card .chev{color:var(--muted);font-size:19px;}
+
+  #home .utility-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    margin-top:22px; padding-top:16px; border-top:1px solid var(--line);
+  }
+  #home .utility-row button{background:none;border:none;color:var(--muted);font-size:12.5px;padding:6px 2px;}
+  #home .utility-row button:active{color:var(--gold);}
+
+  /* APP VIEW */
+  .appview{position:fixed;left:0;right:0;top:0;bottom:64px;background:#fff;display:none;flex-direction:column;z-index:20;}
+  .appview .loading-hint{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; background:#fff; color:#667; font-size:13px; z-index:1;
+    pointer-events:none;
+  }
+  .appview .loading-hint.hidden{display:none;}
+  .appview .spinner{
+    width:28px;height:28px;border-radius:50%;border:3px solid #dde3ea;border-top-color:#C7A458;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .appview.active{display:flex;}
+  .appview iframe{flex:1;width:100%;border:none;background:#fff;}
+
+  /* BOTTOM NAV (always visible once logged in — lets you jump between apps directly) */
+  #bottomnav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    display:flex;background:var(--panel);border-top:1px solid var(--line);
+    padding:8px 6px max(8px,env(safe-area-inset-bottom));
+  }
+  #bottomnav button{
+    flex:1;background:none;border:none;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-size:11px;padding:6px 2px;border-radius:10px;
+  }
+  #bottomnav button img{width:22px;height:22px;border-radius:6px;opacity:.75;}
+  #bottomnav button.active{color:var(--gold);background:var(--gold-dim);}
+  #bottomnav button.active img{opacity:1;}
+
+  /* FINGERPRINT LOCK SCREEN */
+  #fp-lock-screen{position:fixed;inset:0;background:var(--bg);z-index:9997;display:flex;align-items:center;justify-content:center;padding:24px;}
+  #fp-lock-screen.hidden{display:none !important;}
+  .fp-box{width:100%;max-width:340px;text-align:center;}
+  .fp-box img{width:60px;height:60px;border-radius:14px;margin-bottom:16px;border:1px solid var(--line);}
+  .fp-box .fp-title{font-size:17px;font-weight:700;margin-bottom:4px;}
+  .fp-box .fp-sub{font-size:13px;color:var(--muted);margin-bottom:26px;}
+  .fp-btn{
+    width:88px;height:88px;border-radius:50%;border:2px solid var(--gold);background:var(--gold-dim);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 20px;cursor:pointer;
+  }
+  .fp-btn svg{width:40px;height:40px;}
+  .fp-box .fp-err{color:#d97a6c;font-size:13px;min-height:18px;margin-bottom:10px;}
+  .fp-box .fp-alt{background:none;border:none;color:var(--gold);font-size:13px;padding:8px;}
+
+  /* Small toggle link shown on the home screen to turn fingerprint unlock on/off */
+  #fp-toggle-link{background:none;border:none;color:var(--muted);font-size:12.5px;padding:6px 2px;}
+
+  /* font only — all colours are the original ones */
+  html, body, button, input, textarea, select{
+    font-family:'Times New Roman','Tinos','Liberation Serif','Tiro Bangla','Hind Siliguri',serif !important;
+  }
+</style>
+</head>
+<body>
+
+<div id="boot-check">Loading…</div>
+
+<div id="fp-lock-screen" class="hidden">
+  <div class="fp-box">
+    <img src="icon-192.png" alt="">
+    <div class="fp-title">Glass Locked</div>
+    <div class="fp-sub">Use your fingerprint to enter</div>
+    <div class="fp-btn" id="fp-unlock-btn" onclick="unlockWithFingerprint(false)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#C7A458" stroke-width="1.6"><path d="M12 2a7 7 0 0 0-7 7c0 2.5.5 4.5 1.2 6M12 2a7 7 0 0 1 7 7c0 1.2-.1 2.2-.3 3.1M8 9a4 4 0 0 1 8 0c0 3.5 1 6.5 2.3 9M12 9a3 3 0 0 0-3 3c0 3-1 6-2.7 8M12 9a3 3 0 0 1 3 3c0 1-.1 2-.3 3M9 20a9 9 0 0 0 1.5-3"/></svg>
+    </div>
+    <div class="fp-err" id="fp-lock-err"></div>
+    <button class="fp-alt" id="fp-use-password-btn" onclick="fallbackToPasswordLogin()">Sign in with password</button>
+  </div>
+</div>
+
+<div id="login-screen" class="hidden">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="icon-192.png" alt="">
+      <div class="t1">Glass</div>
+      <div class="t2">One login — Glass & Party</div>
+    </div>
+
+    <div id="login-form">
+      <input type="text" id="login-name" placeholder="Shop / Name" autocapitalize="words">
+      <input type="password" id="login-pass" placeholder="Password">
+      <div class="err" id="login-err"></div>
+      <button class="primary" id="login-btn" onclick="doLogin()">Log in</button>
+      <div class="switch">Don’t have an account? <a href="#" onclick="showSignup();return false;">Create one</a></div>
+    </div>
+
+    <div id="signup-form" style="display:none;">
+      <input type="text" id="signup-name" placeholder="Shop / Name" autocapitalize="words">
+      <input type="password" id="signup-pass" placeholder="Password (at least 6 characters)">
+      <input type="password" id="signup-pass2" placeholder="Re-enter password">
+      <div class="err" id="signup-err"></div>
+      <button class="primary" id="signup-btn" onclick="doSignup()">Create account</button>
+      <div class="switch">Already have an account? <a href="#" onclick="showLogin();return false;">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="headband">
+      <div class="brandrow">
+        <img src="icon-192.png" alt="">
+        <div>
+          <h1>Glass</h1>
+          <p class="sub">All apps in one place</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card" style="--accent:var(--c-nasirglass);" onclick="openApp('nasirglass')">
+        <div class="icon"><img src="apps/nasirglass/icon-192.png" alt=""></div>
+        <div class="meta">
+          <div class="name">Glass</div>
+          <div class="desc">Orders, invoices, commission accounts</div>
+        </div>
+        <div class="chev">›</div>
+      </div>
+
+      <div class="card" style="--accent:var(--c-ddb);" onclick="openApp('ddb')">
+        <div class="icon"><img src="apps/ddb/icon-192.png" alt=""></div>
+        <div class="meta">
+          <div class="name">Party</div>
+          <div class="desc">Party / distributor ledger</div>
+        </div>
+        <div class="chev">›</div>
+      </div>
+    </div>
+
+    <div id="viewing-banner" style="display:none;margin:10px 14px;padding:10px 12px;border-radius:12px;background:#fff4d6;color:#7a5b00;font-size:13px;">
+      Viewing shop: <b id="viewing-name"></b>
+      <button onclick="viewShop('', '')" style="margin-left:8px;border:none;background:#7a5b00;color:#fff;border-radius:8px;padding:4px 10px;">Back to mine</button>
+    </div>
+
+    <div id="admin-box" style="display:none;margin:10px 14px;padding:12px;border-radius:14px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.08);">
+      <div style="font-weight:700;margin-bottom:6px;">🛡️ Admin — all shops</div>
+      <div id="admin-list" style="font-size:14px;">Loading…</div>
+    </div>
+
+    <div class="utility-row">
+      <button id="fp-toggle-link" onclick="toggleFingerprintSetting()">Turn on fingerprint lock</button>
+      <button id="logout-link" onclick="doLogout()">Log out</button>
+    </div>
+  </div>
+
+  <!-- APP VIEWS (iframes are lazy-loaded on first open, then kept alive) -->
+  <div class="appview" id="view-nasirglass">
+    <div class="loading-hint" id="loading-nasirglass"><div class="spinner"></div>Loading…</div>
+    <iframe id="frame-nasirglass" data-src="apps/nasirglass/index.html"></iframe>
+  </div>
+
+  <div class="appview" id="view-ddb">
+    <div class="loading-hint" id="loading-ddb"><div class="spinner"></div>Loading…</div>
+    <iframe id="frame-ddb" data-src="apps/ddb/index.html"></iframe>
+  </div>
+
+  <!-- PERSISTENT BOTTOM NAV -->
+  <div id="bottomnav">
+    <button id="nav-home" onclick="openApp('home')">
+      <img src="icon-192.png" alt="">
+      Home
+    </button>
+    <button id="nav-nasirglass" onclick="openApp('nasirglass')">
+      <img src="apps/nasirglass/icon-192.png" alt="">
+      Glass
+    </button>
+    <button id="nav-ddb" onclick="openApp('ddb')">
+      <img src="apps/ddb/icon-192.png" alt="">
+      Party
+    </button>
+  </div>
+
+</div>
+
+<script>
+  /* ---------------- Firebase (shared login for all three apps) ---------------- */
+  const firebaseConfig = {
+    apiKey: "AIzaSyDM7Ih6vwpdOEqCPywkufHkCsU13B2uxhg",
+    authDomain: "glass-party-app.firebaseapp.com",
+    projectId: "glass-party-app",
+    storageBucket: "glass-party-app.firebasestorage.app",
+    messagingSenderId: "828378385432",
+    appId: "1:828378385432:web:b13034a4408cc3a089476d"
+  };
+  let auth = null;
+  let db = null;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+  }catch(e){ console.error('Firebase init failed', e); }
+
+  function showApp(){
+    document.getElementById('boot-check').classList.add('hidden');
+    document.getElementById('login-screen').classList.add('hidden');
+    if(sessionStorage.getItem('ng_hub_skip_fp_once')){
+      sessionStorage.removeItem('ng_hub_skip_fp_once');
+      revealAppNow();
+      return;
+    }
+    if(isFingerprintEnabled()){
+      showFpLockScreen();
+    } else {
+      revealAppNow();
+    }
+  }
+  function revealAppNow(){
+    document.getElementById('fp-lock-screen').classList.add('hidden');
+    document.getElementById('app').style.display = 'flex';
+    openApp('home');
+    updateFpToggleLabel();
+  }
+  function showFpLockScreen(){
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('fp-lock-err').textContent = '';
+    document.getElementById('fp-lock-screen').classList.remove('hidden');
+    // try once automatically — on many phones this pops the fingerprint/Face ID
+    // prompt right away; if the browser blocks it without a fresh tap, fail
+    // silently here (no red error) — the person just taps the button below.
+    unlockWithFingerprint(true);
+  }
+  function showLoginScreen(){
+    document.getElementById('boot-check').classList.add('hidden');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('fp-lock-screen').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+  }
+  function showLogin(){
+    document.getElementById('signup-form').style.display = 'none';
+    document.getElementById('login-form').style.display = '';
+    document.getElementById('signup-err').textContent = '';
+  }
+  function showSignup(){
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('signup-form').style.display = '';
+    document.getElementById('login-err').textContent = '';
+  }
+  // Shop/party names are typed in plain — not email addresses — so each name is
+  // turned into a fixed internal email behind the scenes for Firebase's login system.
+  // The same name always maps to the same internal address, which is what keeps
+  // each shop's data separate and lets them log back in with just their name.
+  function nameToEmail(name){
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'');
+    return slug + '@party.ngil.app';
+  }
+  let currentPartyName = '';
+  // Who is logged in (uid) and whose data the apps are currently showing.
+  // Admin (Mehedi Admin) can switch 'viewing' to any shop; everyone else only sees their own.
+  const ADMIN_EMAIL = 'mehedi.admin@party.ngil.app';
+  let myUid = '';
+  let isAdmin = false;
+  let currentShopId = '';   // uid whose data the Glass/Party apps load
+  async function doLogin(){
+    const name = document.getElementById('login-name').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const errBox = document.getElementById('login-err');
+    const btn = document.getElementById('login-btn');
+    errBox.textContent = '';
+    if(!name || !pass){ errBox.textContent = 'Enter name and password'; return; }
+    btn.disabled = true; btn.textContent = 'Logging in...';
+    try{
+      await auth.signInWithEmailAndPassword(nameToEmail(name), pass);
+      currentPartyName = name;
+      try{ localStorage.setItem('ng_party_name', name); }catch(e){}
+    }
+    catch(e){ errBox.textContent = loginErrorMessage(e); }
+    finally{ btn.disabled = false; btn.textContent = 'Log in'; }
+  }
+  async function doSignup(){
+    const name = document.getElementById('signup-name').value.trim();
+    const pass = document.getElementById('signup-pass').value;
+    const pass2 = document.getElementById('signup-pass2').value;
+    const errBox = document.getElementById('signup-err');
+    const btn = document.getElementById('signup-btn');
+    errBox.textContent = '';
+    if(!name || !pass){ errBox.textContent = 'Enter name and password'; return; }
+    if(pass.length < 6){ errBox.textContent = 'Password must be at least 6 characters'; return; }
+    if(pass !== pass2){ errBox.textContent = 'The two passwords do not match'; return; }
+    btn.disabled = true; btn.textContent = 'Creating...';
+    try{
+      const cred = await auth.createUserWithEmailAndPassword(nameToEmail(name), pass);
+      try{ await cred.user.updateProfile({displayName: name}); }catch(e){}
+      try{ await db.collection('shopDirectory').doc(cred.user.uid).set({ name: name, createdAt: Date.now() }); }catch(e){ console.error('directory write failed', e); }
+      currentPartyName = name;
+      try{ localStorage.setItem('ng_party_name', name); }catch(e){}
+    }
+    catch(e){ errBox.textContent = loginErrorMessage(e); }
+    finally{ btn.disabled = false; btn.textContent = 'Create account'; }
+  }
+  function loginErrorMessage(e){
+    const code = e && e.code || '';
+    if(code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) return 'Wrong name or password';
+    if(code.includes('email-already-in-use')) return 'This name is already registered — please log in';
+    if(code.includes('weak-password')) return 'Password is too weak';
+    if(code.includes('network-request-failed')) return 'No internet connection';
+    if(code.includes('too-many-requests')) return 'Too many attempts, please try again shortly';
+    return 'Something went wrong, please try again';
+  }
+  async function doLogout(){
+    if(!confirm('Do you want to log out?')) return;
+    try{ await auth.signOut(); }catch(e){}
+  }
+
+  /* ---------------- Fingerprint / Face unlock (WebAuthn, device-based) ----------------
+     This does NOT replace Firebase login — it's an extra lock screen shown every
+     time the Hub is opened, so the phone's fingerprint/Face sensor is required
+     before the already-logged-in dashboard is revealed. The credential is tied
+     to this device+browser, so each phone needs its own one-time setup. */
+  const FP_CRED_KEY = 'ng_hub_fp_cred_id';
+
+  function isFingerprintEnabled(){
+    return !!localStorage.getItem(FP_CRED_KEY);
+  }
+  function b64urlToBuf(b64url){
+    const pad = '='.repeat((4 - b64url.length % 4) % 4);
+    const b64 = (b64url + pad).replace(/-/g,'+').replace(/_/g,'/');
+    const str = atob(b64);
+    const buf = new Uint8Array(str.length);
+    for(let i=0;i<str.length;i++) buf[i] = str.charCodeAt(i);
+    return buf.buffer;
+  }
+  function bufToB64url(buf){
+    const bytes = new Uint8Array(buf);
+    let str = '';
+    for(let i=0;i<bytes.length;i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function isPlatformAuthenticatorAvailable(){
+    if(!window.PublicKeyCredential || !navigator.credentials) return false;
+    try{ return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+    catch(e){ return false; }
+  }
+  async function registerFingerprint(){
+    const available = await isPlatformAuthenticatorAvailable();
+    if(!available){
+      alert('Fingerprint/Face unlock is not supported on this device or browser.');
+      return;
+    }
+    try{
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userId = crypto.getRandomValues(new Uint8Array(16));
+      const label = (auth.currentUser && auth.currentUser.email) || 'user';
+      const cred = await navigator.credentials.create({
+        publicKey:{
+          challenge,
+          rp:{ name:'Glass' },
+          user:{ id:userId, name:label, displayName:label },
+          pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+          authenticatorSelection:{ authenticatorAttachment:'platform', userVerification:'required' },
+          timeout:60000
+        }
+      });
+      localStorage.setItem(FP_CRED_KEY, bufToB64url(cred.rawId));
+      updateFpToggleLabel();
+      alert('Fingerprint lock is on — the app will now ask for your fingerprint when opened.');
+    }catch(e){
+      console.error(e);
+      alert('Could not set up fingerprint. Please try again.');
+    }
+  }
+  function disableFingerprint(){
+    localStorage.removeItem(FP_CRED_KEY);
+    updateFpToggleLabel();
+    alert('Fingerprint lock turned off.');
+  }
+  async function toggleFingerprintSetting(){
+    if(isFingerprintEnabled()){
+      if(confirm('Do you want to turn off fingerprint lock?')) disableFingerprint();
+    } else {
+      await registerFingerprint();
+    }
+  }
+  function updateFpToggleLabel(){
+    const btn = document.getElementById('fp-toggle-link');
+    if(!btn) return;
+    btn.textContent = isFingerprintEnabled() ? 'Turn off fingerprint lock' : 'Turn on fingerprint lock';
+  }
+  async function unlockWithFingerprint(silent){
+    const errBox = document.getElementById('fp-lock-err');
+    const credIdB64 = localStorage.getItem(FP_CRED_KEY);
+    if(!credIdB64){ revealAppNow(); return; }
+    try{
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      await navigator.credentials.get({
+        publicKey:{
+          challenge,
+          allowCredentials:[{ id:b64urlToBuf(credIdB64), type:'public-key' }],
+          userVerification:'required',
+          timeout:60000
+        }
+      });
+      revealAppNow();
+    }catch(e){
+      console.error(e);
+      if(!silent && errBox) errBox.textContent = 'Fingerprint did not match or was cancelled — please try again';
+    }
+  }
+  async function fallbackToPasswordLogin(){
+    sessionStorage.setItem('ng_hub_skip_fp_once','1');
+    document.getElementById('fp-lock-screen').classList.add('hidden');
+    try{ await auth.signOut(); }catch(e){}
+  }
+
+  if(auth){
+    auth.onAuthStateChanged(user => {
+      if(user){
+        currentPartyName = user.displayName || localStorage.getItem('ng_party_name') || '';
+        myUid = user.uid;
+        currentShopId = user.uid;
+        isAdmin = (user.email || '').toLowerCase() === ADMIN_EMAIL;
+        document.getElementById('admin-box').style.display = isAdmin ? '' : 'none';
+        if(isAdmin) loadAdminList();
+        showApp();
+      }
+      else{
+        // logged out: drop any loaded app pages so the next person never sees stale data
+        ['nasirglass','ddb'].forEach(k=>{ const f=document.getElementById('frame-'+k); if(f) f.removeAttribute('src'); });
+        myUid = ''; currentShopId = ''; isAdmin = false;
+        showLoginScreen();
+      }
+    });
+  } else {
+    // Firebase failed to load (e.g. offline) — fall back to using the app without cloud login
+    showApp();
+  }
+
+  /* ---------------- Home screen overview: total money + party + ton, in one place ---------------- */
+  const TONCAT_LABELS = {tempered:'Tempered', clear:'Clear', colour:'Colour', reflective:'Reflective', mirror:'Mirror'};
+  window._overviewData = null;
+
+  async function loadOverview(){
+    const body = document.getElementById('overview-body');
+    if(!body) return;
+    if(!db || !auth || !auth.currentUser){ body.textContent = 'Could not load — please try again shortly'; return; }
+    body.textContent = 'Loading…';
+    try{
+      const nasirCol = 'nasirglass_' + currentShopId;
+      const [invSnap] = await Promise.all([
+        db.collection(nasirCol).doc('invoices').get()
+      ]);
+      // Invoices saved by the Nasir Glass app: {date, name, code, doNo, totals:{amt,mt,sft}, commission:{cr,netPayable}}
+      const entries = (invSnap.exists ? (invSnap.data().list || []) : []).map(inv=>({
+        date: inv.date || '',
+        party: inv.name || '',
+        code: inv.code || '',
+        gross: (inv.totals && inv.totals.amt) || 0,
+        net: parseFloat(inv.commission && inv.commission.netPayable) || 0,
+        cr: (inv.commission && inv.commission.cr) || 0,
+        weight: (inv.totals && inv.totals.mt) || 0
+      }));
+
+      const ym = new Date().toISOString().slice(0,7); // "YYYY-MM"
+      const monthEntries = entries.filter(e => (e.date||'').slice(0,7) === ym);
+      const grossMonth = monthEntries.reduce((s,e)=>s+(e.gross||0),0);
+      const netMonth = monthEntries.reduce((s,e)=>s+(e.net||0),0);
+      const grossAll = entries.reduce((s,e)=>s+(e.gross||0),0);
+
+      const byParty = {};
+      monthEntries.forEach(e=>{
+        const key = e.code || e.party || '-';
+        if(!byParty[key]) byParty[key] = {name: e.party||key, code:e.code||'', gross:0, net:0};
+        byParty[key].gross += (e.gross||0);
+        byParty[key].net += (e.net||0);
+      });
+      const topParties = Object.values(byParty).sort((a,b)=>b.gross-a.gross).slice(0,5);
+
+      // CR (Taka given as CR), grouped by month then by party — across ALL
+      // history, not just this month, so "who got how much CR in which month" is answered.
+      const crByMonth = {};
+      entries.forEach(e=>{
+        const cr = e.cr || 0;
+        if(cr <= 0) return;
+        const m = (e.date||'').slice(0,7) || 'Unknown month';
+        if(!crByMonth[m]) crByMonth[m] = {};
+        const key = e.party || e.code || '-';
+        crByMonth[m][key] = (crByMonth[m][key] || 0) + cr;
+      });
+      const crMonthsSorted = Object.keys(crByMonth).sort((a,b)=> b.localeCompare(a)).slice(0,6); // most recent 6 months
+      const crMonthTotal = (crByMonth[ym] ? Object.values(crByMonth[ym]).reduce((a,b)=>a+b,0) : 0);
+
+      window._overviewData = {grossMonth, netMonth, grossAll, topParties, ym, crByMonth, crMonthsSorted, crMonthTotal};
+
+      body.innerHTML = `
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin:8px 0 10px;">
+          <div><div style="font-size:11px;color:#8291a0;">This month’s gross</div><div style="font-weight:700;font-size:15px;">৳ ${Math.round(grossMonth).toLocaleString('en-IN')}</div></div>
+          <div><div style="font-size:11px;color:#8291a0;">This month’s net</div><div style="font-weight:700;font-size:15px;">৳ ${Math.round(netMonth).toLocaleString('en-IN')}</div></div>
+          <div><div style="font-size:11px;color:#8291a0;">This month’s CR</div><div style="font-weight:700;font-size:15px;color:#c0392b;">৳ ${Math.round(crMonthTotal).toLocaleString('en-IN')}</div></div>
+        </div>
+        ${topParties.length ? `
+        <div style="font-size:11px;color:#8291a0;margin-top:2px;">Top parties (this month)</div>
+        <div style="font-size:13px;">
+          ${topParties.map(p=>`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>${p.name}</span><span style="font-weight:600;">৳ ${Math.round(p.gross).toLocaleString('en-IN')}</span></div>`).join('')}
+        </div>` : `<div style="font-size:12.5px;color:#8291a0;">No entries yet this month</div>`}
+        ${crMonthsSorted.length ? `
+        <div style="font-size:11px;color:#8291a0;margin-top:10px;">CR statement — who received how much in each month</div>
+        <div style="font-size:13px;">
+          ${crMonthsSorted.map(m=>`
+            <div style="margin-top:4px;">
+              <div style="font-weight:600;color:#4a86d8;">${m}</div>
+              ${Object.entries(crByMonth[m]).sort((a,b)=>b[1]-a[1]).map(([name,amt])=>`
+                <div style="display:flex;justify-content:space-between;padding:1px 0 1px 8px;"><span>${name}</span><span style="font-weight:600;color:#c0392b;">৳ ${Math.round(amt).toLocaleString('en-IN')}</span></div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>` : ''}
+      `;
+    }catch(e){
+      console.error('overview load failed', e);
+      body.textContent = 'Could not load';
+    }
+  }
+
+  function shareOverview(){
+    const d = window._overviewData;
+    if(!d){ alert('Please wait, data is loading'); return; }
+    let text = `📊 Glass — Summary (${d.ym})\n\n`;
+    text += `Total gross: ৳${Math.round(d.grossMonth).toLocaleString('en-IN')}\n`;
+    text += `Total net: ৳${Math.round(d.netMonth).toLocaleString('en-IN')}\n`;
+    if(d.topParties.length){
+      text += `\nTop parties:\n`;
+      d.topParties.forEach(p=>{ text += `- ${p.name}: ৳${Math.round(p.gross).toLocaleString('en-IN')}\n`; });
+    }
+    if(d.crMonthsSorted && d.crMonthsSorted.length){
+      text += `\nCR statement (who received how much in each month):\n`;
+      d.crMonthsSorted.forEach(m=>{
+        text += `${m}:\n`;
+        Object.entries(d.crByMonth[m]).sort((a,b)=>b[1]-a[1]).forEach(([name,amt])=>{
+          text += `  - ${name}: ৳${Math.round(amt).toLocaleString('en-IN')}\n`;
+        });
+      });
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
+
+  /* ---------------- Admin: list every shop, and open any shop's data ---------------- */
+  async function loadAdminList(){
+    const box = document.getElementById('admin-list');
+    if(!box || !db) return;
+    try{
+      const snap = await db.collection('shopDirectory').get();
+      const rows = [];
+      snap.forEach(d => rows.push({uid: d.id, name: (d.data().name || '(no name)'), at: d.data().createdAt || 0}));
+      rows.sort((a,b)=> a.name.localeCompare(b.name));
+      if(!rows.length){ box.textContent = 'No shops yet'; return; }
+      box.innerHTML = rows.map(r =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee;">
+           <span>${r.name.replace(/</g,'&lt;')}</span>
+           <button onclick="viewShop('${r.uid}', this.dataset.n)" data-n="${r.name.replace(/"/g,'&quot;')}" style="border:none;background:#3E6DA8;color:#fff;border-radius:8px;padding:5px 12px;">View</button>
+         </div>`).join('');
+    }catch(e){ console.error(e); box.textContent = 'Could not load shops'; }
+  }
+  // Switch which shop's data the apps show (admin only). Empty uid = back to own data.
+  function viewShop(uid, name){
+    if(!isAdmin) return;
+    currentShopId = uid || myUid;
+    ['nasirglass','ddb'].forEach(k=>{
+      const f = document.getElementById('frame-'+k);
+      if(f){ f.removeAttribute('src'); }
+      const h = document.getElementById('loading-'+k);
+      if(h) h.classList.remove('hidden');
+    });
+    const banner = document.getElementById('viewing-banner');
+    if(uid && uid !== myUid){
+      document.getElementById('viewing-name').textContent = name;
+      banner.style.display = '';
+    } else { banner.style.display = 'none'; }
+    loadOverview();
+    if(uid) openApp('nasirglass');
+  }
+
+  /* ---------------- Navigation between the three apps + home ---------------- */
+  function openApp(key){
+    document.querySelectorAll('.appview').forEach(v=>v.classList.remove('active'));
+    document.getElementById('home').style.display = (key === 'home') ? '' : 'none';
+    if(key !== 'home'){
+      const frame = document.getElementById('frame-'+key);
+      if(frame && !frame.src && frame.dataset.src){
+        const partyQ = currentShopId ? ('?shop=' + encodeURIComponent(currentShopId)) : '';
+        frame.src = frame.dataset.src + partyQ; // load this sub-app only the first time it's opened
+        frame.addEventListener('load', ()=>{
+          const hint = document.getElementById('loading-'+key);
+          if(hint) hint.classList.add('hidden');
+        }, {once:true});
+      }
+      document.getElementById('view-'+key).classList.add('active');
+    }
+    document.querySelectorAll('#bottomnav button').forEach(b=>b.classList.remove('active'));
+    document.getElementById('nav-'+key).classList.add('active');
+    if(history.state !== key) history.pushState(key,'','#'+key);
+  }
+  window.addEventListener('popstate', ()=>{
+    const h = location.hash.replace('#','') || 'home';
+    if(document.getElementById('nav-'+h)) openApp(h);
+  });
+
+  // Register service worker for offline use
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+</script>
+</body>
+</html>
